@@ -1,0 +1,10 @@
+name = "strict"
+description = "Baseline plus credential protection, confirmation for destructive commands, shorter local retention."
+packs = [
+  "privacy",
+  "anti-bypass",
+  "secrets",
+  "destructive",
+  "audit",
+  "retention",
+]

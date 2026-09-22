@@ -1,0 +1,7 @@
+name = "baseline"
+description = "Barely changes daily use. Recommended for everyone."
+packs = [
+  "privacy",
+  "anti-bypass",
+  "audit",
+]

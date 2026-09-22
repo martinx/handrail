@@ -1,0 +1,21 @@
+id = "audit"
+version = "1.0.0"
+category = "audit"
+tier = "enforced"
+title = "Local audit log"
+summary = "Every tool call leaves one line on this machine: when, which session, which directory, what was called. Written locally, never sent anywhere."
+protects = [
+  "Answering 'what exactly did it do?' after the fact",
+  "Spotting unexpected network access or deletions",
+]
+tradeoffs = [
+  "The log can contain sensitive command-line arguments (common password patterns are masked); files are mode 600",
+]
+limits = "The log is written as you, so any process running as you can edit it. It protects against mistakes, not deliberate tampering."
+
+[targets.claude-code]
+enforcement = "enforced"
+settings = "claude-code/settings.json"
+hooks = [
+  "claude-code/hooks/log.sh",
+]

@@ -1,0 +1,5 @@
+# name	expected exit	input
+Bash call	0	{"session_id":"s1","cwd":"/tmp","tool_name":"Bash","tool_input":{"command":"ls -la"}}
+command with a password	0	{"session_id":"s1","cwd":"/tmp","tool_name":"Bash","tool_input":{"command":"mysql --password=hunter2 -e 1"}}
+file read	0	{"session_id":"s1","cwd":"/tmp","tool_name":"Read","tool_input":{"file_path":"/etc/hosts"}}
+empty input must not crash	0	

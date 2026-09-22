@@ -1,0 +1,18 @@
+id = "supply-chain"
+version = "1.0.0"
+category = "security"
+tier = "enforced"
+title = "Run only your own hooks"
+summary = "Run only hooks from managed policy; hooks shipped inside cloned repositories never run. Also disables automatic installation from the official plugin marketplace."
+protects = [
+  "When you trusted a parent folder or run claude -p, hooks defined in a cloned repository's .claude/settings.json run arbitrary commands",
+]
+tradeoffs = [
+  "Hooks in your own ~/.claude/settings.json stop running too (terminal integrations, custom notifications)",
+  "To keep one of your hooks, package it as a local module",
+]
+limits = "Does not cover MCP servers or skills shipped in a repository. Inspect an unfamiliar repository's .claude/ directory before working in it."
+
+[targets.claude-code]
+enforcement = "enforced"
+settings = "claude-code/settings.json"

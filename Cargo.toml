@@ -1,8 +1,16 @@
 [workspace]
 resolver = "2"
-members = ["crates/handrail"]
+members = ["crates/handrail", "crates/handrail-core", "crates/handrail-claude"]
 
 [workspace.package]
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/martinx/handrail"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+toml = "0.8"
+sha2 = "0.10"
+thiserror = "1"
+tempfile = "3"

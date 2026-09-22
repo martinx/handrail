@@ -1,0 +1,18 @@
+id = "anti-bypass"
+version = "1.0.0"
+category = "security"
+tier = "enforced"
+title = "No bypassing"
+summary = "Lock out 'skip all permission prompts' mode and stop a personal setting from switching off every hook. Without this, the other modules can be bypassed in one step."
+protects = [
+  "Bypassing every prompt with --dangerously-skip-permissions",
+  "Disabling managed hooks with disableAllHooks in personal settings",
+]
+tradeoffs = [
+  "bypassPermissions mode is unavailable (auto mode is not affected)",
+]
+limits = "A local administrator can still edit the managed directory. Protecting against the administrator requires MDM."
+
+[targets.claude-code]
+enforcement = "enforced"
+settings = "claude-code/settings.json"

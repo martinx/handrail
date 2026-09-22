@@ -1,0 +1,12 @@
+name = "paranoid"
+description = "Adds the OS-level sandbox and runs only your own hooks. Changes daily use; read each pack's tradeoffs first."
+packs = [
+  "privacy",
+  "anti-bypass",
+  "secrets",
+  "destructive",
+  "supply-chain",
+  "audit",
+  "retention",
+  "sandbox",
+]
