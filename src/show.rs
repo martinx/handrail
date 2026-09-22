@@ -56,7 +56,21 @@ pub fn list(ctx: &Ctx, category: Option<&str>) {
         }
         println!();
     }
-    println!("Details: handrail show <pack>    Profiles: handrail profiles");
+    if category.is_none() {
+        // Profiles are named sets of the packs above; `handrail use <profile>` installs one
+        println!("Profiles (sets of the packs above). * = exactly what is installed\n");
+        for p in ctx.catalog.profiles.values() {
+            let set: std::collections::BTreeSet<String> = p.packs.iter().cloned().collect();
+            let mark = if !installed.is_empty() && set == installed {
+                "*"
+            } else {
+                " "
+            };
+            println!("  {mark} {:<14} {}", p.name, p.packs.join(" "));
+        }
+        println!();
+    }
+    println!("Details: handrail show <pack>    Profiles: handrail profiles    Apply: handrail use <profile>");
 }
 
 pub fn show(ctx: &Ctx, id: &str) -> Result<(), String> {

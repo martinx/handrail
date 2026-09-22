@@ -7,6 +7,7 @@ mod claude;
 mod context;
 mod core;
 mod embedded;
+mod publish;
 mod show;
 mod update;
 
@@ -116,6 +117,16 @@ enum Cmd {
         #[arg(default_value = ".")]
         dir: PathBuf,
     },
+    /// Propose a pack from your catalog to the shared catalog, as a pull request
+    Publish {
+        /// The pack id (load its catalog with --catalog <dir>)
+        pack: String,
+        /// Catalog repository to propose it to
+        #[arg(long, default_value = publish::DEFAULT_REPO, value_name = "OWNER/NAME")]
+        repo: String,
+        #[command(flatten)]
+        opts: ChangeOpts,
+    },
     /// Update handrail itself to the latest release
     SelfUpdate {
         /// Only report whether a newer release exists
@@ -195,6 +206,15 @@ fn main() -> ExitCode {
             update::refresh_cache(&ctx);
             Ok(())
         }
+        Cmd::Publish { pack, repo, opts } => publish::publish(
+            &ctx,
+            &pack,
+            &publish::Opts {
+                repo,
+                dry_run: opts.dry_run,
+                yes: opts.yes,
+            },
+        ),
         Cmd::Check { dir } => {
             let failures = check::check(&dir);
             if failures > 0 {

@@ -153,7 +153,7 @@ fn print_ops(title: &str, root: &Path, plan: &Plan) {
     }
 }
 
-fn confirm(yes: bool) -> Result<(), String> {
+pub fn confirm(yes: bool) -> Result<(), String> {
     if yes {
         return Ok(());
     }

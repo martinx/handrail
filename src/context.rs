@@ -22,6 +22,12 @@ pub struct ExternalCatalog {
     clone: bool,
 }
 
+impl ExternalCatalog {
+    pub fn is_clone(&self) -> bool {
+        self.clone
+    }
+}
+
 impl Drop for ExternalCatalog {
     fn drop(&mut self) {
         if self.clone {

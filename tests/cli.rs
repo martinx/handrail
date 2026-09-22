@@ -469,3 +469,150 @@ fn external_packs_cannot_reuse_a_built_in_id() {
     assert!(!o.status.success());
     assert!(err(&o).contains("already a built-in pack"), "{}", err(&o));
 }
+
+/// Requests the fake GitHub received: (method, path, body).
+type RequestLog = std::sync::Arc<std::sync::Mutex<Vec<(String, String, String)>>>;
+
+/// A stand-in for api.github.com: answers the calls `handrail publish` makes, as a user
+/// without push access to the catalog (so a fork is used), and records every request.
+fn fake_github() -> (String, RequestLog) {
+    use std::io::{BufRead, BufReader, Read, Write};
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let base = format!("http://{}", listener.local_addr().unwrap());
+    let log = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let seen = log.clone();
+    std::thread::spawn(move || {
+        for stream in listener.incoming() {
+            let mut stream = stream.unwrap();
+            let mut r = BufReader::new(stream.try_clone().unwrap());
+            let mut line = String::new();
+            r.read_line(&mut line).unwrap();
+            let mut parts = line.split_whitespace();
+            let method = parts.next().unwrap_or("").to_string();
+            let path = parts.next().unwrap_or("").to_string();
+            let (mut len, mut auth) = (0usize, false);
+            loop {
+                let mut h = String::new();
+                r.read_line(&mut h).unwrap();
+                if h.trim().is_empty() {
+                    break;
+                }
+                let lower = h.to_ascii_lowercase();
+                if let Some(v) = lower.strip_prefix("content-length:") {
+                    len = v.trim().parse().unwrap();
+                }
+                if lower.starts_with("authorization: bearer test-token") {
+                    auth = true;
+                }
+            }
+            let mut body = vec![0; len];
+            r.read_exact(&mut body).unwrap();
+            let body = String::from_utf8(body).unwrap();
+            let up = "/repos/martinx/handrail-packs";
+            let fork = "/repos/alice/handrail-packs";
+            let (status, reply) = match (method.as_str(), path.as_str()) {
+                _ if !auth => (401, r#"{"message":"Bad credentials"}"#.to_string()),
+                ("GET", "/user") => (200, r#"{"login":"alice"}"#.into()),
+                ("GET", p) if p == up => {
+                    (200, r#"{"default_branch":"main","permissions":{"push":false}}"#.into())
+                }
+                ("POST", p) if p == format!("{up}/forks") => {
+                    (202, r#"{"full_name":"alice/handrail-packs"}"#.into())
+                }
+                ("GET", p) if p == fork => (200, "{}".into()),
+                ("GET", p) if p == format!("{up}/git/ref/heads/main") => {
+                    (200, r#"{"object":{"sha":"base"}}"#.into())
+                }
+                ("POST", p) if p == format!("{fork}/merge-upstream") => (200, "{}".into()),
+                ("GET", p) if p == format!("{fork}/git/commits/base") => {
+                    (200, r#"{"tree":{"sha":"tree0"}}"#.into())
+                }
+                ("GET", p) if p.starts_with(&format!("{fork}/git/trees/tree0")) => (
+                    200,
+                    r#"{"tree":[{"path":"packs/my-audit","type":"tree"},{"path":"packs/my-audit/old.md","type":"blob"},{"path":"packs/other/pack.toml","type":"blob"}]}"#.into(),
+                ),
+                ("POST", p) if p == format!("{fork}/git/blobs") => (201, r#"{"sha":"blob"}"#.into()),
+                ("POST", p) if p == format!("{fork}/git/trees") => (201, r#"{"sha":"tree1"}"#.into()),
+                ("POST", p) if p == format!("{fork}/git/commits") => (201, r#"{"sha":"c1"}"#.into()),
+                ("POST", p) if p == format!("{fork}/git/refs") => (201, "{}".into()),
+                ("POST", p) if p == format!("{up}/pulls") => {
+                    (201, r#"{"html_url":"https://github.com/martinx/handrail-packs/pull/7"}"#.into())
+                }
+                _ => (404, r#"{"message":"Not Found"}"#.into()),
+            };
+            seen.lock().unwrap().push((method, path, body));
+            let _ = write!(
+                stream,
+                "HTTP/1.1 {status} X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{reply}",
+                reply.len()
+            );
+        }
+    });
+    (base, log)
+}
+
+#[test]
+fn publish_opens_a_pull_request_from_a_fork() {
+    let e = Env::new();
+    let cat = e.tmp.path().join("my-packs");
+    external_catalog(&cat, "my-audit");
+    let (api, log) = fake_github();
+    let o = Command::new(env!("CARGO_BIN_EXE_handrail"))
+        .args([
+            "publish",
+            "my-audit",
+            "--catalog",
+            cat.to_str().unwrap(),
+            "-y",
+        ])
+        .arg("--managed-root")
+        .arg(e.root())
+        .arg("--user-dir")
+        .arg(e.user())
+        .args(["--claude-version", "2.1.278 (Claude Code)"])
+        .env("HOME", e.tmp.path().join("home"))
+        .env("GITHUB_TOKEN", "test-token")
+        .env_remove("GH_TOKEN")
+        .env("HANDRAIL_GITHUB_API", &api)
+        .output()
+        .unwrap();
+    assert!(o.status.success(), "{}{}", out(&o), err(&o));
+    assert!(out(&o).contains("https://github.com/martinx/handrail-packs/pull/7"));
+
+    let log = log.lock().unwrap();
+    let body = |path: &str| -> serde_json::Value {
+        let (_, _, b) = log
+            .iter()
+            .find(|(m, p, _)| m == "POST" && p.ends_with(path))
+            .unwrap();
+        serde_json::from_str(b).unwrap()
+    };
+    // Every file of the pack, and the file an earlier version had, removed; nothing else
+    let tree = body("/git/trees");
+    let entries = tree["tree"].as_array().unwrap();
+    assert!(entries
+        .iter()
+        .any(|e| e["path"] == "packs/my-audit/old.md" && e["sha"].is_null()));
+    assert!(entries
+        .iter()
+        .any(|e| e["path"] == "packs/my-audit/pack.toml"));
+    assert!(entries
+        .iter()
+        .any(|e| e["path"] == "packs/my-audit/claude-code/hooks/log.sh" && e["mode"] == "100755"));
+    assert!(entries
+        .iter()
+        .all(|e| e["path"].as_str().unwrap().starts_with("packs/my-audit/")));
+    let pr = body("/pulls");
+    assert_eq!(pr["head"], "alice:pack/my-audit-1.0.0");
+    assert_eq!(pr["base"], "main");
+    assert_eq!(pr["title"], "Update my-audit v1.0.0");
+    assert!(pr["body"].as_str().unwrap().contains("handrail check"));
+}
+
+#[test]
+fn publish_refuses_built_in_packs() {
+    let e = Env::new();
+    let o = e.run(&["publish", "privacy", "--dry-run"]);
+    assert!(!o.status.success());
+    assert!(err(&o).contains("built-in pack"), "{}", err(&o));
+}
