@@ -15,7 +15,7 @@
 |---|---|---|---|
 | Register `handrail.sh` (optionally `gethandrail.dev`) | maintainer | S | The only resource someone else could take with no good substitute. Until then the site uses `handrail.bitey.ai` |
 | Point `handrail.bitey.ai` at GitHub Pages: verify `bitey.ai` in GitHub first, then add `handrail CNAME martinx.github.io.` | maintainer | S | Verification first prevents subdomain takeover while the CNAME points at GitHub before our Pages site exists |
-| Reserve the `handrail` crate: publish a minimal, real 0.0.1 | maintainer creates the token; publish after approval | S | Must be a working binary that points to the repository, not an empty placeholder |
+| ~~Reserve the `handrail` crate~~ | done | — | 0.0.1 published 2026-09-22, owner `martinx`, tag `v0.0.1`. Later releases use crates.io Trusted Publishing from GitHub Actions (no long-lived token) |
 | Install M0 `baseline` on the maintainer's machine and use it daily | maintainer | S | Real use surfaces friction before anyone else sees it |
 | Decide when the repository goes public | maintainer | — | homebrew-core counts repository age (30 days minimum), so an earlier public repo starts the clock earlier |
 
