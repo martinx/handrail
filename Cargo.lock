@@ -193,7 +193,7 @@ dependencies = [
 
 [[package]]
 name = "handrail"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "clap",
  "include_dir",

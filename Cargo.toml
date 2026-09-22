@@ -1,6 +1,6 @@
 [package]
 name = "handrail"
-version = "0.1.2"
+version = "0.2.0"
 description = "Policy packs for coding agents: enforced where the agent allows it, honest where it doesn't."
 edition = "2021"
 license = "Apache-2.0"
