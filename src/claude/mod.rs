@@ -18,7 +18,7 @@
 //! no randomness. The privileged step recomputes the plan from the intent and compares
 //! its hash with the one the user reviewed.
 
-use crate::core::catalog::{Catalog, Pack, Tier};
+use crate::core::catalog::{Catalog, Origin, Pack, Tier};
 use crate::core::plan::{current, Expect, Op, Plan};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
@@ -78,6 +78,44 @@ pub struct State {
 pub struct InstalledPack {
     pub id: String,
     pub version: String,
+    /// Where an external pack came from (directory or repository). Absent for built-in packs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub origin: Option<String>,
+}
+
+fn installed(p: &Pack) -> InstalledPack {
+    InstalledPack {
+        id: p.id().into(),
+        version: p.manifest.version.clone(),
+        origin: match &p.origin {
+            Origin::Builtin => None,
+            Origin::External(s) => Some(s.clone()),
+        },
+    }
+}
+
+/// Where the installed copy of external packs lives, relative to a tier's root.
+pub const EXTERNAL: &str = "handrail/external";
+
+/// The copy of an external pack's own files, installed alongside it. Everything later
+/// (status, drift checks, removal, the privileged step of the next change) reads this
+/// copy, which sits in a root-owned directory for enforced packs, instead of the author's
+/// directory, which anything running as the user could change.
+fn vendored(p: &Pack) -> Vec<(String, Vec<u8>, u32)> {
+    if p.origin == Origin::Builtin {
+        return vec![];
+    }
+    p.files
+        .iter()
+        .map(|(rel, bytes)| {
+            let mode = if rel.ends_with(".sh") { 0o755 } else { 0o644 };
+            (
+                format!("{EXTERNAL}/packs/{}/{rel}", p.id()),
+                bytes.clone(),
+                mode,
+            )
+        })
+        .collect()
 }
 
 pub fn read_state(root: &Path) -> Option<State> {
@@ -189,17 +227,12 @@ fn enforced_plan(root: &Path, packs: &[&Pack], local_rules: &[String], version: 
                 0o755,
             ));
         }
+        desired.extend(vendored(pack));
     }
     let active = !packs.is_empty() || !local_rules.is_empty();
     let state = State {
         handrail_version: version.to_string(),
-        packs: packs
-            .iter()
-            .map(|p| InstalledPack {
-                id: p.id().into(),
-                version: p.manifest.version.clone(),
-            })
-            .collect(),
+        packs: packs.iter().map(|p| installed(p)).collect(),
         local_rules: local_rules.to_vec(),
         files: desired.iter().map(|(p, _, _)| p.clone()).collect(),
     };
@@ -263,34 +296,28 @@ fn enforced_plan(root: &Path, packs: &[&Pack], local_rules: &[String], version: 
 }
 
 fn advisory_plan(root: &Path, packs: &[&Pack], version: &str) -> Plan {
-    let desired: Vec<(String, Vec<u8>)> = packs
-        .iter()
-        .map(|p| {
-            (
-                format!("rules/{MARK}-{}.md", p.id()),
-                p.rules.clone().into_bytes(),
-            )
-        })
-        .collect();
+    let mut desired: Vec<(String, Vec<u8>, u32)> = Vec::new();
+    for p in packs {
+        desired.push((
+            format!("rules/{MARK}-{}.md", p.id()),
+            p.rules.clone().into_bytes(),
+            0o644,
+        ));
+        desired.extend(vendored(p));
+    }
     let state = State {
         handrail_version: version.to_string(),
-        packs: packs
-            .iter()
-            .map(|p| InstalledPack {
-                id: p.id().into(),
-                version: p.manifest.version.clone(),
-            })
-            .collect(),
+        packs: packs.iter().map(|p| installed(p)).collect(),
         local_rules: vec![],
-        files: desired.iter().map(|(p, _)| p.clone()).collect(),
+        files: desired.iter().map(|(p, _, _)| p.clone()).collect(),
     };
     let old_files = read_state(root).map(|s| s.files).unwrap_or_default();
     let mut plan = Plan::default();
-    for (path, bytes) in &desired {
-        push_write(&mut plan, root, path, bytes.clone(), 0o644);
+    for (path, bytes, mode) in &desired {
+        push_write(&mut plan, root, path, bytes.clone(), *mode);
     }
     for old in &old_files {
-        if !desired.iter().any(|(p, _)| p == old) && root.join(old).exists() {
+        if !desired.iter().any(|(p, _, _)| p == old) && root.join(old).exists() {
             plan.ops.push(Op::Delete {
                 path: old.clone(),
                 expect: current(root, old),
@@ -307,6 +334,7 @@ fn advisory_plan(root: &Path, packs: &[&Pack], version: &str) -> Plan {
             expect: current(root, STATE),
         });
     }
+    prune_dirs(&mut plan, root, &old_files);
     plan
 }
 

@@ -122,11 +122,26 @@ pub struct TargetFiles {
     pub hooks: Vec<Hook>,
 }
 
+/// Where a pack came from.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Origin {
+    /// Compiled into this handrail binary.
+    Builtin,
+    /// From a directory or repository given with `--catalog`, or its installed copy.
+    /// The string says where it came from, for display.
+    External(String),
+}
+
 #[derive(Debug, Clone)]
 pub struct Pack {
     pub manifest: Manifest,
     pub rules: String,
     pub targets: BTreeMap<String, TargetFiles>,
+    pub origin: Origin,
+    /// Every file in the pack's directory, by path relative to it. An external pack is
+    /// installed together with a copy of these, so that everything later (status, drift
+    /// checks, removal) works from a root-owned copy rather than the author's directory.
+    pub files: BTreeMap<String, Vec<u8>>,
 }
 
 impl Pack {
@@ -234,6 +249,41 @@ impl Catalog {
         problems.extend(scalar_conflicts(&packs));
         if problems.is_empty() {
             Ok(Catalog { packs, profiles })
+        } else {
+            Err(problems)
+        }
+    }
+
+    /// Marks every pack as coming from `label` (a directory or repository).
+    pub fn set_origin(&mut self, origin: Origin) {
+        for p in self.packs.values_mut() {
+            p.origin = origin.clone();
+        }
+    }
+
+    /// Adds another catalog's packs (its profiles are not taken).
+    ///
+    /// - A pack may not reuse a built-in pack's id: it would impersonate it.
+    /// - A pack with the id of an earlier external pack replaces it (a newer version of
+    ///   your own pack, or the installed copy being superseded by the source).
+    /// - After merging, the scalar-conflict check runs again over everything: a pack that
+    ///   silently overrode a built-in setting would defeat the built-in pack.
+    pub fn merge(&mut self, other: Catalog) -> Result<(), Vec<Problem>> {
+        let mut problems = Vec::new();
+        for (id, pack) in other.packs {
+            match self.packs.get(&id) {
+                Some(existing) if existing.origin == Origin::Builtin => problems.push(prob(
+                    &format!("packs/{id}/pack.toml"),
+                    format!("id \"{id}\" is already a built-in pack; choose another id"),
+                )),
+                _ => {
+                    self.packs.insert(id, pack);
+                }
+            }
+        }
+        problems.extend(scalar_conflicts(&self.packs));
+        if problems.is_empty() {
+            Ok(())
         } else {
             Err(problems)
         }
@@ -407,11 +457,38 @@ fn load_pack(src: &dyn Source, dir: &str, problems: &mut Vec<Problem>) -> Option
         );
     }
 
+    let mut files = BTreeMap::new();
+    collect_files(src, &format!("packs/{dir}"), "", &mut files);
     (problems.len() == before).then_some(Pack {
         manifest,
         rules,
         targets,
+        origin: Origin::Builtin,
+        files,
     })
+}
+
+/// Every file under `base`, keyed by its path relative to `base`. A path that cannot be
+/// read as a file is treated as a directory and walked.
+fn collect_files(src: &dyn Source, base: &str, rel: &str, out: &mut BTreeMap<String, Vec<u8>>) {
+    let dir = if rel.is_empty() {
+        base.to_string()
+    } else {
+        format!("{base}/{rel}")
+    };
+    for name in src.entries(&dir) {
+        let child_rel = if rel.is_empty() {
+            name.clone()
+        } else {
+            format!("{rel}/{name}")
+        };
+        match src.read(&format!("{base}/{child_rel}")) {
+            Some(bytes) => {
+                out.insert(child_rel, bytes);
+            }
+            None => collect_files(src, base, &child_rel, out),
+        }
+    }
 }
 
 fn check_placeholders(v: &serde_json::Value, path: &str, problems: &mut Vec<Problem>) {

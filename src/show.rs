@@ -3,7 +3,7 @@
 use crate::claude::{other_sources, plan, Finding, TARGET};
 use crate::context::{can_write, Ctx};
 use crate::core::apply::JOURNAL;
-use crate::core::catalog::{Enforcement, Pack, Tier};
+use crate::core::catalog::{Enforcement, Origin, Pack, Tier};
 use std::collections::BTreeMap;
 
 fn enforcement(p: &Pack) -> Enforcement {
@@ -42,8 +42,12 @@ pub fn list(ctx: &Ctx, category: Option<&str>) {
         println!("{cat}");
         for p in packs {
             let mark = if installed.contains(p.id()) { "*" } else { " " };
+            let from = match &p.origin {
+                Origin::Builtin => String::new(),
+                Origin::External(o) => format!("  [from {o}]"),
+            };
             println!(
-                "  {mark} {:<14} {:<9} {:<10} {}",
+                "  {mark} {:<14} {:<9} {:<10} {}{from}",
                 p.id(),
                 tier(p.manifest.tier),
                 enforcement(p).as_str(),
@@ -69,6 +73,9 @@ pub fn show(ctx: &Ctx, id: &str) -> Result<(), String> {
         tier(m.tier),
         if ctx.is_installed(id) { "yes" } else { "no" }
     );
+    if let Origin::External(o) = &p.origin {
+        println!("From: {o} (not part of handrail's built-in catalog; review it before enabling)");
+    }
     println!("\n{}", m.summary);
     if !m.protects.is_empty() {
         println!("\nProtects against:");

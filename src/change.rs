@@ -218,7 +218,8 @@ pub fn apply_locally(root: &Path, plan: &Plan, intent: &Intent) -> Result<(), St
 
 /// Runs `sudo <this binary> __apply` with the intent — not the file contents.
 ///
-/// The privileged process recomputes the plan from the catalog compiled into the binary
+/// The privileged process recomputes the plan from the same catalogs (built-in, the
+/// root-owned installed copies, and any --catalog directories)
 /// and refuses unless its hash matches the plan the user just reviewed.
 fn elevate(ctx: &Ctx, intent: &Intent, expect: &str) -> Result<(), String> {
     let exe = std::env::current_exe().map_err(|e| format!("locating the handrail binary: {e}"))?;
@@ -242,6 +243,14 @@ fn elevate(ctx: &Ctx, intent: &Intent, expect: &str) -> Result<(), String> {
         .arg(expect);
     if ctx.custom_paths {
         cmd.arg("--managed-root").arg(&ctx.target.managed_root);
+    }
+    // Pass the local directories, not the URLs: root reads what the user reviewed
+    // rather than fetching again (and the plan hash check catches any change since).
+    for c in &ctx.catalogs {
+        cmd.arg("--catalog")
+            .arg(&c.dir)
+            .arg("--catalog-label")
+            .arg(&c.label);
     }
     println!("\nAdministrator rights are needed for the enforced tier; running sudo.");
     let status = cmd.status();

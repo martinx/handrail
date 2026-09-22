@@ -35,6 +35,12 @@ struct Cli {
     /// Pretend this Claude Code version is installed (testing only)
     #[arg(long, global = true, hide = true)]
     claude_version: Option<String>,
+    /// Also use packs from this directory or git repository (repeatable)
+    #[arg(long, global = true, value_name = "DIR|REPO")]
+    catalog: Vec<String>,
+    /// Origin label for each --catalog, in order (internal: set by the privileged step)
+    #[arg(long, global = true, hide = true)]
+    catalog_label: Vec<String>,
 }
 
 #[derive(Args)]
@@ -161,6 +167,8 @@ fn main() -> ExitCode {
         managed_root: cli.managed_root,
         user_dir: cli.user_dir,
         claude_version: cli.claude_version,
+        catalogs: cli.catalog,
+        catalog_labels: cli.catalog_label,
     }) {
         Ok(c) => c,
         Err(e) => return fail(e),

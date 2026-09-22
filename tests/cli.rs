@@ -382,3 +382,90 @@ fn statusline_shows_a_newer_release_only_when_the_check_is_on() {
     .unwrap();
     assert_eq!(e.ok(&["statusline"]).trim(), "handrail: baseline ✓");
 }
+
+/// A one-pack catalog in `dir`: a copy of the built-in `audit` pack under a new id.
+fn external_catalog(dir: &Path, id: &str) {
+    let src = repo().join("catalog/packs/audit");
+    let dst = dir.join("packs").join(id);
+    let mut files = Vec::new();
+    files_under(&src, &mut files);
+    for f in files {
+        let rel = f.strip_prefix(&src).unwrap();
+        let to = dst.join(rel);
+        fs::create_dir_all(to.parent().unwrap()).unwrap();
+        let mut bytes = fs::read(&f).unwrap();
+        if rel == Path::new("pack.toml") {
+            bytes = String::from_utf8(bytes)
+                .unwrap()
+                .replace("id = \"audit\"", &format!("id = \"{id}\""))
+                .into_bytes();
+        }
+        fs::write(&to, bytes).unwrap();
+    }
+}
+
+#[test]
+fn external_packs_install_from_a_directory_and_survive_without_it() {
+    let e = Env::new();
+    let cat = e.tmp.path().join("my-packs");
+    external_catalog(&cat, "my-audit");
+    let c = cat.to_str().unwrap();
+
+    assert!(e.ok(&["list", "--catalog", c]).contains("my-audit"));
+    e.ok(&["enable", "my-audit", "--catalog", c, "-y"]);
+    let copy = e.root().join("handrail/external/packs/my-audit");
+    assert!(copy.join("pack.toml").is_file());
+    let state = fs::read_to_string(e.root().join("handrail/state.json")).unwrap();
+    assert!(state.contains(&format!(
+        "\"origin\": \"{}\"",
+        cat.canonicalize().unwrap().display()
+    )));
+
+    // The source directory can go away: status and disable use the installed copy.
+    fs::remove_dir_all(&cat).unwrap();
+    let s = e.ok(&["status"]);
+    assert!(s.contains("my-audit"), "{s}");
+    assert!(!s.contains('⚠'), "{s}");
+    e.ok(&["disable", "my-audit", "-y"]);
+    assert!(!e.root().join("handrail/external").exists());
+}
+
+#[test]
+fn external_packs_install_from_a_git_repository() {
+    let e = Env::new();
+    let cat = e.tmp.path().join("repo");
+    external_catalog(&cat, "team-audit");
+    let git = |args: &[&str]| {
+        let o = Command::new("git")
+            .current_dir(&cat)
+            .args(args)
+            .output()
+            .unwrap();
+        assert!(o.status.success(), "git {args:?}: {}", err(&o));
+    };
+    git(&["init", "-q"]);
+    git(&["add", "."]);
+    git(&[
+        "-c",
+        "user.name=t",
+        "-c",
+        "user.email=t@t",
+        "commit",
+        "-qm",
+        "packs",
+    ]);
+    let url = format!("file://{}", cat.display());
+    e.ok(&["enable", "team-audit", "--catalog", &url, "-y"]);
+    let state = fs::read_to_string(e.root().join("handrail/state.json")).unwrap();
+    assert!(state.contains(&url), "{state}");
+}
+
+#[test]
+fn external_packs_cannot_reuse_a_built_in_id() {
+    let e = Env::new();
+    let cat = e.tmp.path().join("evil");
+    external_catalog(&cat, "privacy");
+    let o = e.run(&["list", "--catalog", cat.to_str().unwrap()]);
+    assert!(!o.status.success());
+    assert!(err(&o).contains("already a built-in pack"), "{}", err(&o));
+}
