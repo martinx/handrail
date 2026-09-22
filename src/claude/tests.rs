@@ -1,10 +1,10 @@
 use super::*;
-use handrail_core::apply::apply;
-use handrail_core::catalog::DirSource;
+use crate::core::apply::apply;
+use crate::core::catalog::DirSource;
 use std::fs;
 
 fn catalog() -> Catalog {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../catalog");
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("catalog");
     Catalog::load(&DirSource(root)).unwrap_or_else(|p| panic!("{p:#?}"))
 }
 
@@ -281,7 +281,7 @@ fn strip_block_keeps_everything_else_byte_for_byte() {
 /// Each pack's hook test vectors (`tests/*.cases`: name, expected exit code, stdin).
 #[test]
 fn hook_test_vectors() {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../catalog/packs");
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("catalog/packs");
     let mut ran = 0;
     for pack in fs::read_dir(&root).unwrap() {
         let pack = pack.unwrap().path();

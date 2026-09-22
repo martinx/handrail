@@ -4,10 +4,10 @@
 //! the privileged step only ever writes content that was in the binary the user ran —
 //! never content read from a user-writable file.
 
-use handrail_core::catalog::{Catalog, Source};
+use crate::core::catalog::{Catalog, Source};
 use include_dir::{include_dir, Dir};
 
-static CATALOG: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../../catalog");
+static CATALOG: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/catalog");
 
 struct Embedded;
 

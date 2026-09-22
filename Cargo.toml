@@ -1,16 +1,26 @@
-[workspace]
-resolver = "2"
-members = ["crates/handrail", "crates/handrail-core", "crates/handrail-claude"]
-
-[workspace.package]
+[package]
+name = "handrail"
+version = "0.1.1"
+description = "Policy packs for coding agents: enforced where the agent allows it, honest where it doesn't."
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/martinx/handrail"
+homepage = "https://handrail.bitey.ai"
+readme = "README.md"
+keywords = ["ai-agents", "coding-agent", "security", "policy", "cli"]
+categories = ["command-line-utilities", "development-tools"]
+# Only what the binary needs. The catalog is compiled in (include_dir), so it must ship.
+include = ["src/**", "catalog/**", "tests/**", "Cargo.toml", "Cargo.lock", "README.md", "LICENSE", "NOTICE"]
 
-[workspace.dependencies]
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+include_dir = "0.7"
+libc = "0.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
-toml = "0.8"
 sha2 = "0.10"
 thiserror = "1"
+toml = "0.8"
+
+[dev-dependencies]
 tempfile = "3"

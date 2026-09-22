@@ -249,7 +249,7 @@ fn files_under(dir: &Path, out: &mut Vec<PathBuf>) {
 }
 
 fn repo() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
 /// sh swallows the leading bytes of a multibyte character into a variable name:
@@ -290,7 +290,8 @@ fn hook_scripts_never_put_non_ascii_right_after_a_variable() {
 fn shipped_text_is_english() {
     let mut files = vec![];
     files_under(&repo().join("catalog"), &mut files);
-    files_under(&repo().join("crates"), &mut files);
+    files_under(&repo().join("src"), &mut files);
+    files_under(&repo().join("tests"), &mut files);
     files_under(&repo().join("docs"), &mut files);
     files.push(repo().join("README.md"));
     for f in files
@@ -308,4 +309,20 @@ fn shipped_text_is_english() {
             panic!("{}:{}: CJK text in a shipped file", f.display(), n + 1);
         }
     }
+}
+
+#[test]
+fn statusline_reports_profile_packs_drift_and_off() {
+    let e = Env::new();
+    assert_eq!(e.ok(&["statusline"]).trim(), "handrail: off");
+    e.ok(&["use", "baseline", "--yes"]);
+    assert_eq!(e.ok(&["statusline"]).trim(), "handrail: baseline ✓");
+    e.ok(&["enable", "secrets", "--yes"]);
+    assert_eq!(e.ok(&["statusline"]).trim(), "handrail: 4 packs ✓");
+    fs::write(
+        e.root().join("managed-settings.d/handrail-privacy.json"),
+        "{}",
+    )
+    .unwrap();
+    assert_eq!(e.ok(&["statusline"]).trim(), "handrail: 4 packs drift ⚠");
 }

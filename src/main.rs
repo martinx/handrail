@@ -2,13 +2,16 @@
 //! where it doesn't. This version targets Claude Code.
 
 mod change;
+mod claude;
 mod context;
+mod core;
 mod embedded;
 mod show;
+mod update;
 
+use crate::claude::Intent;
 use clap::{Args, Parser, Subcommand};
 use context::{Ctx, Overrides};
-use handrail_claude::Intent;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -100,6 +103,14 @@ enum Cmd {
     },
     /// Check that the installed policy is actually in force
     Doctor,
+    /// Update handrail itself to the latest release
+    SelfUpdate {
+        /// Only report whether a newer release exists
+        #[arg(long)]
+        check: bool,
+    },
+    /// One line for Claude Code's status line (see the docs)
+    Statusline,
     /// The built-in catalog as JSON (used to build the website)
     #[command(name = "__catalog-json", hide = true)]
     CatalogJson,
@@ -153,6 +164,11 @@ fn main() -> ExitCode {
         }
         Cmd::Status => {
             show::status(&ctx);
+            Ok(())
+        }
+        Cmd::SelfUpdate { check } => update::self_update(check),
+        Cmd::Statusline => {
+            println!("{}", update::statusline(&ctx));
             Ok(())
         }
         Cmd::Doctor => {

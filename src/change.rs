@@ -1,11 +1,11 @@
 //! Changing what is installed: plan, show, confirm, apply — elevating only for the
 //! enforced tier.
 
+use crate::claude::{plan, Intent, Plans};
 use crate::context::{can_write, is_root, Ctx};
-use handrail_claude::{plan, Intent, Plans};
-use handrail_core::apply::{apply, recover};
-use handrail_core::catalog::Enforcement;
-use handrail_core::plan::{Op, Plan};
+use crate::core::apply::{apply, recover};
+use crate::core::catalog::Enforcement;
+use crate::core::plan::{Op, Plan};
 use std::collections::BTreeSet;
 use std::io::{BufRead, IsTerminal, Write};
 use std::path::{Path, PathBuf};
@@ -72,7 +72,7 @@ fn describe(ctx: &Ctx, old: &Intent, new: &Intent, plans: &Plans) {
         };
         let enf = p
             .targets
-            .get(handrail_claude::TARGET)
+            .get(crate::claude::TARGET)
             .map(|t| t.spec.enforcement)
             .unwrap_or(Enforcement::Unsupported);
         println!(
@@ -132,10 +132,10 @@ fn describe(ctx: &Ctx, old: &Intent, new: &Intent, plans: &Plans) {
     }
 }
 
-fn tier_name(t: handrail_core::catalog::Tier) -> &'static str {
+fn tier_name(t: crate::core::catalog::Tier) -> &'static str {
     match t {
-        handrail_core::catalog::Tier::Enforced => "enforced tier",
-        handrail_core::catalog::Tier::Advisory => "advisory tier",
+        crate::core::catalog::Tier::Enforced => "enforced tier",
+        crate::core::catalog::Tier::Advisory => "advisory tier",
     }
 }
 
@@ -295,7 +295,7 @@ pub fn rollback(ctx: &Ctx, opts: &Opts) -> Result<(), String> {
         .ok()
         .and_then(|rd| rd.filter_map(|e| e.ok().map(|e| e.path())).filter(|p| p.is_dir()).max())
         .ok_or("Nothing to roll back to: there are no backups (removing every pack also removes its backups).")?;
-    let prev: handrail_claude::State = std::fs::read(newest.join("handrail/state.json"))
+    let prev: crate::claude::State = std::fs::read(newest.join("handrail/state.json"))
         .ok()
         .and_then(|b| serde_json::from_slice(&b).ok())
         .unwrap_or_default();
@@ -307,7 +307,7 @@ pub fn rollback(ctx: &Ctx, opts: &Opts) -> Result<(), String> {
             ctx.catalog
                 .packs
                 .get(*id)
-                .is_some_and(|p| p.manifest.tier == handrail_core::catalog::Tier::Advisory)
+                .is_some_and(|p| p.manifest.tier == crate::core::catalog::Tier::Advisory)
         })
         .cloned()
         .collect();

@@ -1,9 +1,9 @@
 //! Read-only commands: list, show, profiles, status, doctor.
 
+use crate::claude::{other_sources, plan, Finding, TARGET};
 use crate::context::{can_write, Ctx};
-use handrail_claude::{other_sources, plan, Finding, TARGET};
-use handrail_core::apply::JOURNAL;
-use handrail_core::catalog::{Enforcement, Pack, Tier};
+use crate::core::apply::JOURNAL;
+use crate::core::catalog::{Enforcement, Pack, Tier};
 use std::collections::BTreeMap;
 
 fn enforcement(p: &Pack) -> Enforcement {
@@ -193,7 +193,7 @@ fn findings(ctx: &Ctx) -> Vec<String> {
             let changed: Vec<&str> = pl
                 .ops
                 .iter()
-                .filter(|o| !matches!(o, handrail_core::plan::Op::RemoveDirIfEmpty { .. }))
+                .filter(|o| !matches!(o, crate::core::plan::Op::RemoveDirIfEmpty { .. }))
                 .map(|o| o.path())
                 .collect();
             if !changed.is_empty() && (!intent.packs.is_empty() || !intent.local_rules.is_empty()) {

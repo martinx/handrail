@@ -16,7 +16,7 @@
 //! every file from the backup and removes files that did not exist before. The next
 //! command runs it automatically.
 
-use crate::plan::{current, is_safe_relative, Op, Plan};
+use crate::core::plan::{current, is_safe_relative, Op, Plan};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::Write;
@@ -338,7 +338,7 @@ fn sync_dir(dir: &Path) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::plan::{sha256_hex, Expect};
+    use crate::core::plan::{sha256_hex, Expect};
 
     fn snapshot(root: &Path) -> Vec<(String, Vec<u8>)> {
         let mut out = Vec::new();

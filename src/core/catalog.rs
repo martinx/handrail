@@ -15,7 +15,9 @@
 
 use serde::Deserialize;
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+#[cfg(test)]
+use std::path::PathBuf;
 
 /// Where catalog files come from: a directory on disk, or files embedded in the binary.
 pub trait Source {
@@ -25,9 +27,12 @@ pub trait Source {
     fn entries(&self, dir: &str) -> Vec<String>;
 }
 
-/// A catalog directory on disk.
+/// A catalog directory on disk. The binary uses the embedded catalog; tests load the
+/// repository's `catalog/` (and fixtures) through this.
+#[cfg(test)]
 pub struct DirSource(pub PathBuf);
 
+#[cfg(test)]
 impl Source for DirSource {
     fn read(&self, path: &str) -> Option<Vec<u8>> {
         std::fs::read(self.0.join(path)).ok()
@@ -239,6 +244,7 @@ impl Catalog {
     }
 
     /// Packs in a profile, in the profile's order.
+    #[cfg(test)]
     pub fn profile_packs(&self, name: &str) -> Option<Vec<&Pack>> {
         let p = self.profiles.get(name)?;
         Some(p.packs.iter().filter_map(|id| self.packs.get(id)).collect())
@@ -281,7 +287,7 @@ fn load_pack(src: &dyn Source, dir: &str, problems: &mut Vec<Problem>) -> Option
             "id must be lowercase letters, digits and hyphens",
         ));
     }
-    if crate::version::parse(&manifest.version).is_none() {
+    if crate::core::version::parse(&manifest.version).is_none() {
         problems.push(prob(
             &mpath,
             format!("version \"{}\" is not a dotted number", manifest.version),
@@ -323,7 +329,7 @@ fn load_pack(src: &dyn Source, dir: &str, problems: &mut Vec<Problem>) -> Option
     let mut targets = BTreeMap::new();
     for (target, spec) in &manifest.targets {
         if let Some(v) = &spec.min_version {
-            if crate::version::parse(v).is_none() {
+            if crate::core::version::parse(v).is_none() {
                 problems.push(prob(
                     &mpath,
                     format!("targets.{target}.min_version \"{v}\" is not a dotted number"),
@@ -636,7 +642,7 @@ mod tests {
 
     #[test]
     fn the_shipped_catalog_is_valid() {
-        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../catalog");
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("catalog");
         let c = Catalog::load(&DirSource(root)).unwrap_or_else(|p| panic!("{p:#?}"));
         assert_eq!(c.packs.len(), 8);
         assert_eq!(c.profiles.len(), 3);

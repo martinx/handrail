@@ -1,4 +1,4 @@
-//! Handrail core: everything that does not depend on a particular agent.
+//! Everything that does not depend on a particular agent.
 //!
 //! - [`catalog`]: packs and profiles, loaded from any [`catalog::Source`] and validated.
 //! - [`plan`]: the exact set of file changes an operation will make, with preconditions.

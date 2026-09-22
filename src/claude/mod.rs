@@ -18,8 +18,8 @@
 //! no randomness. The privileged step recomputes the plan from the intent and compares
 //! its hash with the one the user reviewed.
 
-use handrail_core::catalog::{Catalog, Pack, Tier};
-use handrail_core::plan::{current, Expect, Op, Plan};
+use crate::core::catalog::{Catalog, Pack, Tier};
+use crate::core::plan::{current, Expect, Op, Plan};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -140,7 +140,7 @@ pub fn plan(
         };
         if let (Some(required), Some(installed)) = (&files.spec.min_version, &intent.claude_version)
         {
-            if handrail_core::version::at_least(installed, required) == Some(false) {
+            if crate::core::version::at_least(installed, required) == Some(false) {
                 plans.skipped.push(Skipped {
                     id: id.clone(),
                     reason: format!(
@@ -314,8 +314,7 @@ fn advisory_plan(root: &Path, packs: &[&Pack], version: &str) -> Plan {
 fn push_write(plan: &mut Plan, root: &Path, path: &str, content: Vec<u8>, mode: u32) {
     let expect = current(root, path);
     if let Expect::Hash(h) = &expect {
-        if *h == handrail_core::plan::sha256_hex(&content)
-            && mode_of(&root.join(path)) == Some(mode)
+        if *h == crate::core::plan::sha256_hex(&content) && mode_of(&root.join(path)) == Some(mode)
         {
             return;
         }

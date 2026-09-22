@@ -193,31 +193,11 @@ dependencies = [
 
 [[package]]
 name = "handrail"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "clap",
- "handrail-claude",
- "handrail-core",
  "include_dir",
  "libc",
- "serde_json",
- "tempfile",
-]
-
-[[package]]
-name = "handrail-claude"
-version = "0.1.0"
-dependencies = [
- "handrail-core",
- "serde",
- "serde_json",
- "tempfile",
-]
-
-[[package]]
-name = "handrail-core"
-version = "0.1.0"
-dependencies = [
  "serde",
  "serde_json",
  "sha2",

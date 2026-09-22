@@ -1,7 +1,7 @@
 //! Where things are on this machine, and what is installed right now.
 
-use handrail_claude::{read_state, Intent, State, Target};
-use handrail_core::catalog::Catalog;
+use crate::claude::{read_state, Intent, State, Target};
+use crate::core::catalog::Catalog;
 use std::path::{Path, PathBuf};
 
 pub struct Ctx {
