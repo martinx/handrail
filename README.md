@@ -19,16 +19,31 @@ it cannot do.
 
 ## Install
 
+Choose **one** of the following.
+
+**Install script (recommended)**
+
 ```sh
-curl -fsSL https://handrail.bitey.ai/install.sh | sh   # recommended
+curl -fsSL https://handrail.bitey.ai/install.sh | sh
+```
+
+Checks the release's SHA-256 and installs to `/usr/local/bin`, which only root can write.
+
+**Homebrew**
+
+```sh
 brew install martinx/tap/handrail
+```
+
+**Cargo**
+
+```sh
 cargo install handrail
 ```
 
-The install script checks the release's SHA-256 and installs to `/usr/local/bin`, which only
-root can write. That matters: Handrail runs itself through `sudo` to change enforced policy,
-and a binary your user can overwrite (the Homebrew prefix, `~/.cargo/bin`) could be replaced
-by anything running as you before `sudo` runs it. `handrail doctor` checks this.
+Why the script is recommended: Handrail runs itself through `sudo` to change enforced policy,
+and a binary your user can overwrite (the Homebrew prefix, `~/.cargo/bin`) could be replaced by
+anything running as you before `sudo` runs it. `handrail doctor` checks this.
 
 Update with `handrail self-update` (Homebrew and cargo installs are pointed at their own
 upgrade command).

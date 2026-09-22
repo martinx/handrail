@@ -39,6 +39,7 @@
 <p class="lead">Handrail installs policy packs for coding agents where the agent cannot change them. This version supports Claude Code on macOS and Linux.</p>
 
 <h2 id="install">Install</h2>
+<p>One command:</p>
 <pre class="snippet">curl -fsSL https://handrail.bitey.ai/install.sh | sh</pre>
 <p>The installer detects your OS and architecture, downloads the matching binary from the <a href="https://github.com/martinx/handrail/releases">GitHub release</a>, checks its SHA-256 against the release's <code>SHA256SUMS</code>, and installs it to <code>/usr/local/bin</code>. Only that final copy uses <code>sudo</code>. It does not change any agent configuration.</p>
 <table>
@@ -55,9 +56,13 @@ sh install.sh</pre>
 <h3>Verify provenance</h3>
 <p>Release archives carry a signed build-provenance attestation. With the GitHub CLI:</p>
 <pre class="snippet">gh attestation verify handrail-aarch64-apple-darwin.tar.gz --repo martinx/handrail</pre>
-<h3>Homebrew and cargo</h3>
-<pre class="snippet">brew install martinx/tap/handrail
-cargo install handrail</pre>
+<h3>Other ways to install</h3>
+<p>Instead of the script, you can use <strong>one</strong> of:</p>
+<table>
+<tr><th>With</th><th>Command</th></tr>
+<tr><td>Homebrew</td><td><code>brew install martinx/tap/handrail</code></td></tr>
+<tr><td>Cargo</td><td><code>cargo install handrail</code></td></tr>
+</table>
 <div class="note warn"><p>Both install into a directory your user can write (the Homebrew prefix, <code>~/.cargo/bin</code>). For enforced policy, the install script above is the safer choice.</p></div>
 <h3>Update</h3>
 <pre class="snippet">handrail self-update --check     <span class="c"># is there a newer release?</span>

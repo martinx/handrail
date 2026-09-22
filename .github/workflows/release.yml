@@ -79,11 +79,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           {
-            echo "Install or upgrade:"
+            echo "Install or upgrade with **one** of:"
             echo
-            echo '    curl -fsSL https://handrail.bitey.ai/install.sh | sh'
-            echo '    brew install martinx/tap/handrail'
-            echo '    cargo install handrail'
+            echo '- Install script (recommended): `curl -fsSL https://handrail.bitey.ai/install.sh | sh`'
+            echo '- Homebrew: `brew install martinx/tap/handrail`'
+            echo '- Cargo: `cargo install handrail`'
+            echo
+            echo 'Already installed? `handrail self-update`'
             echo
             echo "Every archive has a build-provenance attestation. To verify one:"
             echo
