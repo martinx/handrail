@@ -265,3 +265,35 @@ pub fn doctor(ctx: &Ctx) {
         }
     );
 }
+
+/// The catalog as JSON: the single source for anything that presents packs (the website).
+pub fn catalog_json(ctx: &Ctx) -> String {
+    let packs: Vec<serde_json::Value> = ctx
+        .catalog
+        .packs
+        .values()
+        .map(|p| {
+            let m = &p.manifest;
+            let targets: serde_json::Map<String, serde_json::Value> = p
+                .targets
+                .iter()
+                .map(|(t, f)| {
+                    (t.clone(), serde_json::json!({ "enforcement": f.spec.enforcement.as_str(), "min_version": f.spec.min_version }))
+                })
+                .collect();
+            serde_json::json!({
+                "id": m.id, "version": m.version, "category": m.category, "tier": tier(m.tier),
+                "title": m.title, "summary": m.summary, "protects": m.protects,
+                "tradeoffs": m.tradeoffs, "limits": m.limits, "targets": targets,
+            })
+        })
+        .collect();
+    let profiles: Vec<serde_json::Value> = ctx
+        .catalog
+        .profiles
+        .values()
+        .map(|p| serde_json::json!({ "name": p.name, "description": p.description, "packs": p.packs }))
+        .collect();
+    serde_json::to_string_pretty(&serde_json::json!({ "version": crate::change::VERSION, "packs": packs, "profiles": profiles }))
+        .expect("catalog serialises")
+}

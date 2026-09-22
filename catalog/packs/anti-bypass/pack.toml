@@ -3,7 +3,7 @@ version = "1.0.0"
 category = "security"
 tier = "enforced"
 title = "No bypassing"
-summary = "Lock out 'skip all permission prompts' mode and stop a personal setting from switching off every hook. Without this, the other modules can be bypassed in one step."
+summary = "Lock out 'skip all permission prompts' mode and stop a personal setting from switching off every hook. Without this, every other pack can be bypassed in one step."
 protects = [
   "Bypassing every prompt with --dangerously-skip-permissions",
   "Disabling managed hooks with disableAllHooks in personal settings",

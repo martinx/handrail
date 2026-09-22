@@ -100,6 +100,9 @@ enum Cmd {
     },
     /// Check that the installed policy is actually in force
     Doctor,
+    /// The built-in catalog as JSON (used to build the website)
+    #[command(name = "__catalog-json", hide = true)]
+    CatalogJson,
     /// Privileged step, run through sudo by the commands above
     #[command(name = "__apply", hide = true)]
     PrivilegedApply {
@@ -231,6 +234,10 @@ fn main() -> ExitCode {
             }
         },
         Cmd::Rollback { opts } => change::rollback(&ctx, &(&opts).into()),
+        Cmd::CatalogJson => {
+            println!("{}", show::catalog_json(&ctx));
+            Ok(())
+        }
         Cmd::PrivilegedApply { intent, expect } => change::privileged_apply(&ctx, &intent, &expect),
     };
     match result {

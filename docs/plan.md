@@ -47,6 +47,11 @@ and Linux x64 pass CI.
 
 ## M2 — Distribution, remote registry, UI
 
+**Done ahead of the rest of M2 (2026-09-22):** website (landing page + docs, generated from the
+catalog), `install.sh` (checksum-verified, sudo only for the final copy), release workflow
+(4 targets, SHA256SUMS, build-provenance attestations), Pages workflow. Waiting on: a public
+repository, GitHub Pages with the `handrail.bitey.ai` custom domain, and the first `v0.1.0` tag.
+
 **Blocked on:** a public repository (GitHub Pages on a free plan needs one), a signing key. The site starts on `handrail.bitey.ai`; `handrail.sh` replaces it once registered.
 
 | # | Task | Size |

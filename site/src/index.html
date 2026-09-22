@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Handrail — rules your coding agent can't switch off</title>
+<meta name="description" content="Handrail installs security and privacy policy for Claude Code where the agent itself cannot change it, and tells you which rules are enforced and which are only requests.">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23f2b441'/%3E%3Cpath d='M7 12h18M10 12v13M22 12v13' stroke='%231a1307' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script>try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="./" aria-label="Handrail home">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 8h18M6 8v12M18 8v12" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      Handrail
+    </a>
+    <nav class="nav-links">
+      <a class="opt" href="#packs">Packs</a>
+      <a class="opt" href="#how">How it works</a>
+      <a class="opt" href="#extend">Extend</a>
+      <a href="docs.html">Docs</a>
+      <a href="https://github.com/martinx/handrail">GitHub</a>
+      <button class="theme-btn" type="button" aria-label="Toggle light and dark theme" data-theme-toggle>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+<div class="hero">
+  <div class="wrap">
+    <div class="eyebrow"><span class="dot"></span> Now for Claude Code · macOS &amp; Linux · v{{VERSION}}</div>
+    <h1>Rules your coding agent <em>can't switch off.</em></h1>
+    <p class="lede">
+      Handrail installs security and privacy policy for Claude Code <strong>where the agent itself cannot change it</strong>,
+      and tells you plainly which rules are enforced and which are only requests.
+    </p>
+    <div class="install">
+      <code><span class="p">$</span>curl -fsSL https://handrail.bitey.ai/install.sh | sh</code>
+      <button class="copy" type="button" data-copy="curl -fsSL https://handrail.bitey.ai/install.sh | sh">Copy</button>
+    </div>
+    <p class="then">Then: <code>handrail use baseline --dry-run</code> to see exactly what would change, and <code>handrail use baseline</code> to apply it.</p>
+    <div class="hero-meta">
+      <span>{{PACK_COUNT}} packs · {{PROFILE_COUNT}} profiles</span>
+      <span>Apache-2.0</span>
+      <span>No account, no telemetry</span>
+      <a href="docs.html#install">Other ways to install</a>
+    </div>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <div class="kicker">The problem</div>
+    <h2>A rule in a prompt is a request. Handrail installs enforcement.</h2>
+    <p class="section-lede">
+      Most "agent rules" are lines in an instructions file. The model usually follows them — and the agent,
+      running as you, can edit or delete the file. Nothing tells you which of your rules are real.
+    </p>
+    <div class="versus">
+      <div class="vs-card">
+        <div class="vs-head"><span class="badge b-advisory">request</span><h3>A line in an instructions file</h3></div>
+<pre class="snippet"><span class="c"># ~/.claude/CLAUDE.md</span>
+Never publish anything to the internet.</pre>
+        <ul>
+          <li>The model decides whether to follow it</li>
+          <li>Anything running as you can change the file</li>
+          <li>No way to tell if it was loaded</li>
+        </ul>
+      </div>
+      <div class="vs-card good">
+        <div class="vs-head"><span class="badge b-enforced">enforced</span><h3>Policy the agent evaluates</h3></div>
+<pre class="snippet"><span class="c"># managed-settings.d/handrail-privacy.json  (owned by root)</span>
+{ <span class="k">"enableArtifact"</span>: <span class="s">false</span>,
+  <span class="k">"disableRemoteControl"</span>: <span class="s">true</span>, … }</pre>
+        <ul>
+          <li>Claude Code applies it, whatever the model thinks</li>
+          <li>Top precedence: user and project settings cannot override it</li>
+          <li>Changing it needs your password — the agent can't</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="kicker">What you get</div>
+    <h2>Built to be trusted with root.</h2>
+    <p class="section-lede">Handrail writes system policy, so every change is planned, shown, checked and reversible.</p>
+    <div class="grid-3">
+      <div class="feature">
+        <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+        <h3>Out of the agent's reach</h3>
+        <p>Enforced packs live in Claude Code's root-owned managed policy directory, which user and project settings cannot override.</p>
+      </div>
+      <div class="feature">
+        <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></div>
+        <h3>Honest about enforcement</h3>
+        <p>Every pack says whether Claude Code fully enforces it or only partly, what it costs you, and what it cannot do.</p>
+      </div>
+      <div class="feature">
+        <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></div>
+        <h3>Transactional</h3>
+        <p>Changes are staged, backed up and journaled. If a run dies halfway, the next one restores the previous state exactly.</p>
+      </div>
+      <div class="feature">
+        <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/></svg></div>
+        <h3>Trusts nothing it's handed</h3>
+        <p>Only <em>which packs you want</em> goes to sudo. The privileged step recomputes the plan itself and refuses if it differs from the one you reviewed.</p>
+      </div>
+      <div class="feature">
+        <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/></svg></div>
+        <h3>Detects tampering</h3>
+        <p><code>handrail doctor</code> compares installed files with what Handrail wrote and warns when another policy source would override yours.</p>
+      </div>
+      <div class="feature">
+        <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></div>
+        <h3>Leaves no trace</h3>
+        <p><code>handrail disable --all</code> removes everything it installed. Files it didn't create are never touched, byte for byte.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="packs">
+  <div class="wrap">
+    <div class="kicker">Packs</div>
+    <h2>Pick what you need. See what it costs.</h2>
+    <p class="section-lede">
+      <span class="badge b-enforced">enforced</span> Claude Code applies it whatever the model does.
+      <span class="badge b-partial">partial</span> Enforced for common paths; the pack's limits say what slips through.
+    </p>
+    {{PACK_FILTERS}}
+    <div class="packs" id="pack-list">
+{{PACK_CARDS}}
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="profiles">
+  <div class="wrap">
+    <div class="kicker">Profiles</div>
+    <h2>Or start from a profile.</h2>
+    <p class="section-lede">A profile is a named set of packs. <code>handrail use &lt;profile&gt;</code> makes the installed set exactly that; your own rules are kept.</p>
+    <div class="profiles">
+{{PROFILES}}
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="kicker">How it works</div>
+    <h2>Handrail writes the policy. Claude Code enforces it.</h2>
+    <p class="section-lede">Handrail doesn't sit between you and the agent. It puts policy where Claude Code reads it first — and nothing else can override it.</p>
+    <div class="flow">
+<pre class="snippet tree"><span class="c">$ handrail use baseline</span>
+<span class="c">  sudo receives only: which packs you want</span>
+
+/Library/Application Support/ClaudeCode/   <span class="c"># root-owned</span>
+├─ managed-settings.d/
+│  ├─ <span class="k">handrail-privacy.json</span>      <span class="c"># settings &amp; permission rules</span>
+│  ├─ <span class="k">handrail-anti-bypass.json</span>
+│  └─ <span class="k">handrail-audit.json</span>
+├─ handrail/packs/privacy/hooks/
+│  └─ <span class="s">guard.sh</span>                   <span class="c"># runs before every tool call</span>
+└─ CLAUDE.md                     <span class="c"># Handrail's block: loaded</span>
+                                 <span class="c"># in every session</span></pre>
+      <ol class="steps">
+        <li><h3>Plan</h3><p>Handrail computes the exact files a change writes. <code>--dry-run</code> shows them; nothing else is touched.</p></li>
+        <li><h3>Elevate — the intent only</h3><p>You confirm and type your password. The privileged step rebuilds the plan from the catalog inside the binary and checks it matches.</p></li>
+        <li><h3>Apply transactionally</h3><p>Validate, stage, back up, journal, commit. Interrupted runs roll back to the exact previous state.</p></li>
+        <li><h3>Claude Code enforces</h3><p>Settings, permission rules and hooks are applied by Claude Code itself; the instructions block is guidance for the model.</p></li>
+      </ol>
+    </div>
+
+    <div class="verify">
+      <div class="feature"><h3>See the source</h3><p>In a new <code>claude</code> session run <code>/status</code>: the managed policy appears under "Setting sources". <code>claude doctor</code> shows the same.</p></div>
+      <div class="feature"><h3>See the instructions</h3><p>Run <code>/memory</code>: the managed <code>CLAUDE.md</code> with Handrail's block is listed as loaded.</p></div>
+      <div class="feature"><h3>Watch it block</h3><p>Ask for an Artifact, or start with <code>--dangerously-skip-permissions</code>: both are refused. With <code>audit</code>, every tool call is logged locally.</p></div>
+      <div class="feature"><h3>Check for tampering</h3><p><code>handrail doctor</code> flags edited or missing files, a writable binary, and MDM policy that would override Handrail.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="extend">
+  <div class="wrap">
+    <div class="kicker">Extend</div>
+    <h2>Your rules, new packs, more agents.</h2>
+    <p class="section-lede">Security is the first category, not the last. The catalog is plain files, validated by tests.</p>
+    <div class="grid-3">
+      <div class="feature">
+        <h3>Add your own rules</h3>
+        <p>One command puts a rule into the root-owned instructions block, loaded in every session.</p>
+<pre class="snippet" style="margin-top:14px">handrail rule add "Reply in English"</pre>
+      </div>
+      <div class="feature">
+        <h3>Write a pack</h3>
+        <p>A directory with metadata, instructions, and optional settings and hooks. <code>cargo test</code> validates it and runs its hook tests.</p>
+<pre class="snippet" style="margin-top:14px">catalog/packs/my-pack/
+├─ pack.toml
+├─ rules.md
+└─ claude-code/settings.json</pre>
+      </div>
+      <div class="feature">
+        <h3>More agents</h3>
+        <p>Packs describe intent; each agent gets an adapter that maps it to the strongest mechanism that agent has — and labels it honestly when that's only a suggestion.</p>
+        <p style="margin-top:12px"><a href="docs.html#roadmap">Roadmap →</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="kicker">Limits</div>
+    <h2>What Handrail can't do.</h2>
+    <p class="section-lede">A security tool that overclaims is worse than none. So, plainly:</p>
+    <div class="limits">
+      <div class="limit"><h3>Inference still leaves the machine</h3><p>Your conversation is sent to the model API — that's how the model answers. Handrail turns off every <em>optional</em> upload and cloud path, not that one.</p></div>
+      <div class="limit"><h3>Administrators can undo it</h3><p>A local admin can edit the managed directory. Protecting against the admin needs MDM.</p></div>
+      <div class="limit"><h3>MDM policy wins</h3><p>If your organisation deploys Claude Code policy by MDM, Claude Code ignores file-based policy by default. <code>handrail status</code> tells you.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="cta">
+  <div class="wrap">
+    <h2>Install in one line. Remove in one line.</h2>
+    <div class="install">
+      <code><span class="p">$</span>curl -fsSL https://handrail.bitey.ai/install.sh | sh</code>
+      <button class="copy" type="button" data-copy="curl -fsSL https://handrail.bitey.ai/install.sh | sh">Copy</button>
+    </div>
+    <p class="then">Prefer to read it first? <a href="install.sh">View the installer</a> — it verifies the release checksum and uses sudo only for the final copy.</p>
+    <p style="margin-top:28px"><a class="btn primary" href="docs.html">Read the docs</a> &nbsp; <a class="btn" href="https://github.com/martinx/handrail">View on GitHub</a></p>
+  </div>
+</section>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <a class="brand" href="./"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 8h18M6 8v12M18 8v12" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>Handrail</a>
+    <a href="docs.html">Docs</a>
+    <a href="https://github.com/martinx/handrail">GitHub</a>
+    <a href="https://github.com/martinx/handrail/blob/main/LICENSE">Apache-2.0</a>
+    <span class="fine">Handrail is an unofficial project and is not affiliated with, or endorsed by, Anthropic or any other agent vendor. Claude and Claude Code are products of their respective owners.</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  document.querySelectorAll("[data-copy]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var text = b.getAttribute("data-copy");
+      var done = function () { b.textContent = "Copied"; b.classList.add("done"); setTimeout(function () { b.textContent = "Copy"; b.classList.remove("done"); }, 1600); };
+      if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () {}); else done();
+    });
+  });
+  var t = document.querySelector("[data-theme-toggle]");
+  if (t) t.addEventListener("click", function () {
+    var root = document.documentElement;
+    var dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark";
+    try { localStorage.setItem("theme", root.dataset.theme); } catch (e) {}
+  });
+  var chips = document.querySelectorAll("[data-filter]");
+  chips.forEach(function (c) {
+    c.addEventListener("click", function () {
+      var f = c.getAttribute("data-filter");
+      chips.forEach(function (x) { x.setAttribute("aria-pressed", String(x === c)); });
+      document.querySelectorAll(".pack").forEach(function (p) { p.hidden = f !== "all" && p.getAttribute("data-category") !== f; });
+    });
+  });
+})();
+</script>
+</body>
+</html>

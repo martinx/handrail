@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Handrail docs</title>
+<meta name="description" content="Install, use, verify and extend Handrail: policy packs for coding agents.">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23f2b441'/%3E%3Cpath d='M7 12h18M10 12v13M22 12v13' stroke='%231a1307' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script>try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="./"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 8h18M6 8v12M18 8v12" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>Handrail</a>
+    <nav class="nav-links">
+      <a class="opt" href="./#packs">Packs</a>
+      <a href="docs.html">Docs</a>
+      <a href="https://github.com/martinx/handrail">GitHub</a>
+      <button class="theme-btn" type="button" aria-label="Toggle light and dark theme" data-theme-toggle>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap docs">
+<aside class="toc">
+  <div class="t">Start</div>
+  <a href="#install">Install</a>
+  <a href="#quickstart">Quick start</a>
+  <a href="#commands">Commands</a>
+  <div class="t">Understand</div>
+  <a href="#tiers">Two tiers</a>
+  <a href="#where">Where files go</a>
+  <a href="#changes">How changes are made</a>
+  <a href="#verify">Verify it's working</a>
+  <a href="#limits">Limits</a>
+  <div class="t">Extend</div>
+  <a href="#rules">Your own rules</a>
+  <a href="#packs">Writing a pack</a>
+  <a href="#roadmap">Roadmap</a>
+  <div class="t">More</div>
+  <a href="#uninstall">Uninstall</a>
+  <a href="#faq">FAQ</a>
+</aside>
+
+<article class="doc">
+<h1>Handrail documentation</h1>
+<p class="lead">Handrail installs policy packs for coding agents where the agent cannot change them. This version supports Claude Code on macOS and Linux.</p>
+
+<h2 id="install">Install</h2>
+<pre class="snippet">curl -fsSL https://handrail.bitey.ai/install.sh | sh</pre>
+<p>The installer detects your OS and architecture, downloads the matching binary from the <a href="https://github.com/martinx/handrail/releases">GitHub release</a>, checks its SHA-256 against the release's <code>SHA256SUMS</code>, and installs it to <code>/usr/local/bin</code>. Only that final copy uses <code>sudo</code>. It does not change any agent configuration.</p>
+<table>
+<tr><th>Variable</th><th>Effect</th></tr>
+<tr><td><code>HANDRAIL_VERSION=v0.1.0</code></td><td>Install a specific release instead of the latest.</td></tr>
+<tr><td><code>HANDRAIL_INSTALL_DIR=…</code></td><td>Install somewhere else. See the note below.</td></tr>
+<tr><td><code>HANDRAIL_VERIFY_PROVENANCE=1</code></td><td>Also require <code>gh attestation verify</code> to confirm the binary was built by this repository's release workflow.</td></tr>
+</table>
+<div class="note warn"><p><strong>Keep the binary where only root can write.</strong> Handrail runs itself through <code>sudo</code> to change enforced policy. A binary your user can overwrite could be replaced by anything running as you before <code>sudo</code> runs it. <code>handrail doctor</code> checks this.</p></div>
+<h3>Read the installer first</h3>
+<pre class="snippet">curl -fsSLO https://handrail.bitey.ai/install.sh
+less install.sh
+sh install.sh</pre>
+<h3>Verify provenance</h3>
+<p>Release archives carry a signed build-provenance attestation. With the GitHub CLI:</p>
+<pre class="snippet">gh attestation verify handrail-aarch64-apple-darwin.tar.gz --repo martinx/handrail</pre>
+<h3>From source</h3>
+<pre class="snippet">git clone https://github.com/martinx/handrail && cd handrail
+cargo build --release
+sudo install -m 755 target/release/handrail /usr/local/bin/handrail</pre>
+
+<h2 id="quickstart">Quick start</h2>
+<pre class="snippet">handrail list                       <span class="c"># packs, and how strongly Claude Code enforces each</span>
+handrail show privacy               <span class="c"># what a pack protects, its tradeoffs, its limits</span>
+handrail use baseline --dry-run     <span class="c"># the exact files that would change</span>
+handrail use baseline               <span class="c"># apply: confirm, then your password once</span></pre>
+<p>Start a new <code>claude</code> session afterwards; running sessions keep their old configuration.</p>
+
+<h2 id="commands">Commands</h2>
+<table>
+<tr><th>Command</th><th>What it does</th></tr>
+<tr><td><code>list [--category c]</code></td><td>Packs by category with tier and enforcement level. <code>*</code> marks installed packs.</td></tr>
+<tr><td><code>show &lt;pack&gt;</code></td><td>Everything about a pack: what it protects, tradeoffs, limits, per-agent enforcement, profiles it belongs to.</td></tr>
+<tr><td><code>profiles</code></td><td>Named sets of packs.</td></tr>
+<tr><td><code>use &lt;profile&gt;</code></td><td>Make the installed packs exactly this profile. Your own rules are kept.</td></tr>
+<tr><td><code>enable &lt;pack…&gt;</code></td><td>Add packs to what is installed.</td></tr>
+<tr><td><code>disable &lt;pack…&gt;</code></td><td>Remove packs. <code>--all</code> removes every pack and rule and leaves nothing behind.</td></tr>
+<tr><td><code>rule add|list|remove</code></td><td>Your own rules, added to the enforced instructions block.</td></tr>
+<tr><td><code>rollback</code></td><td>Undo the last change.</td></tr>
+<tr><td><code>status</code></td><td>What is installed, and anything that would make it ineffective.</td></tr>
+<tr><td><code>doctor</code></td><td>Checks: Claude Code present, binary not user-writable, no overriding policy sources, no interrupted runs, no tampering.</td></tr>
+</table>
+<p>Every command that changes something accepts <code>--dry-run</code> (show the plan, write nothing) and <code>--yes</code> (skip the confirmation prompt; the password prompt remains).</p>
+
+<h2 id="tiers">Two tiers</h2>
+<p>The agent runs as you. Anything you can change without administrator rights, it can change too — including turning a rule off. So packs come in two tiers:</p>
+<table>
+<tr><th></th><th>Enforced</th><th>Advisory</th></tr>
+<tr><td>For</td><td>Security and privacy guarantees</td><td>Preferences and conventions</td></tr>
+<tr><td>Location</td><td>Claude Code's managed policy directory</td><td><code>~/.claude/rules/</code></td></tr>
+<tr><td>Owner</td><td>root</td><td>you</td></tr>
+<tr><td>Changing it</td><td>Needs your password</td><td>No password</td></tr>
+<tr><td>Agent can undo it</td><td>No</td><td>Yes, by design</td></tr>
+</table>
+<p>Separately, each pack states how strongly each agent enforces it:</p>
+<table>
+<tr><th>Level</th><th>Meaning</th></tr>
+<tr><td><span class="badge b-enforced">enforced</span></td><td>Applied by the agent's own settings, permission rules, hooks or sandbox, whatever the model does.</td></tr>
+<tr><td><span class="badge b-partial">partial</span></td><td>Enforced for the common paths; the pack's limits say what gets through (for example, a script that opens a file itself).</td></tr>
+<tr><td><span class="badge b-advisory">advisory</span></td><td>Instructions only. The model is asked, not forced.</td></tr>
+</table>
+
+<h2 id="where">Where files go</h2>
+<p>The managed policy directory is <code>/Library/Application Support/ClaudeCode/</code> on macOS and <code>/etc/claude-code/</code> on Linux. Settings there take precedence over user, project and command-line settings, and the <code>CLAUDE.md</code> there is loaded in every session and cannot be excluded.</p>
+<table>
+<tr><th>Path</th><th>Contents</th></tr>
+<tr><td><code>managed-settings.d/handrail-&lt;pack&gt;.json</code></td><td>One fragment per pack. Claude Code merges fragments in name order: lists are combined, objects merge by key. Handrail's test suite rejects two packs that set the same scalar key differently, because the later one would silently win.</td></tr>
+<tr><td><code>handrail/packs/&lt;pack&gt;/hooks/</code></td><td>Hook scripts referenced by that pack's settings.</td></tr>
+<tr><td><code>CLAUDE.md</code></td><td>A block between <code>&lt;!-- handrail:begin --&gt;</code> and <code>&lt;!-- handrail:end --&gt;</code>. Everything else in the file is left alone, and removing the block restores the original bytes.</td></tr>
+<tr><td><code>handrail/state.json</code></td><td>What is installed, and exactly which files Handrail owns.</td></tr>
+<tr><td><code>handrail/backups/</code></td><td>The five most recent backups, used by <code>rollback</code>.</td></tr>
+</table>
+<p>Handrail never modifies files it did not create, including <code>managed-settings.json</code>.</p>
+
+<h2 id="changes">How changes are made</h2>
+<ol>
+<li><strong>Plan.</strong> The change is computed as an exact list of file writes and deletions, each with the file's current hash as a precondition. <code>--dry-run</code> prints it.</li>
+<li><strong>Elevate the intent, not the files.</strong> For the enforced tier, only which packs and rules you want is passed to <code>sudo handrail __apply</code>. The privileged process recomputes the plan from the catalog compiled into the binary and refuses unless its hash matches the plan you reviewed.</li>
+<li><strong>Apply transactionally.</strong> Check every precondition, validate every JSON file (an invalid managed settings file stops Claude Code from starting), stage new content, back up what will be replaced, write a journal, then commit. If the process dies during the commit, the next run restores the previous state from the journal.</li>
+</ol>
+<p>Because <code>sudo</code> needs a terminal to ask for your password, an agent running commands without one cannot raise its own privileges to change enforced policy.</p>
+
+<h2 id="verify">Verify it's working</h2>
+<ul>
+<li><strong>Source:</strong> in a new <code>claude</code> session, run <code>/status</code> — the managed policy appears under "Setting sources". <code>claude doctor</code> shows it too, including any entries it dropped.</li>
+<li><strong>Instructions:</strong> run <code>/memory</code> — the managed <code>CLAUDE.md</code> is listed as loaded.</li>
+<li><strong>Behaviour:</strong> with <code>privacy</code>, asking for an Artifact is refused with a Handrail message; with <code>anti-bypass</code>, <code>claude --dangerously-skip-permissions</code> is refused; with <code>audit</code>, tool calls appear in <code>~/.claude/handrail/audit/</code>.</li>
+<li><strong>Integrity:</strong> <code>handrail doctor</code> re-plans what is installed. Any difference means files were edited, deleted or replaced.</li>
+</ul>
+
+<h2 id="limits">Limits</h2>
+<ul>
+<li><strong>Model inference sends your conversation to the model API.</strong> No local setting changes that. Handrail turns off every optional upload and cloud execution path.</li>
+<li>A local administrator can edit the managed directory. Protecting against the administrator requires MDM.</li>
+<li>If an MDM-delivered or server-managed Claude Code policy exists, Claude Code uses it and ignores file-based policy by default. <code>handrail status</code> warns about this.</li>
+<li>Commands you type yourself after Claude Code's <code>!</code> prefix are yours: they are not sandboxed or blocked.</li>
+</ul>
+
+<h2 id="rules">Your own rules</h2>
+<pre class="snippet">handrail rule add "Reply in English"
+handrail rule list
+handrail rule remove 1</pre>
+<p>Rules land in the root-owned instructions block, loaded in every session. They are instructions to the model, not enforcement.</p>
+
+<h2 id="packs">Writing a pack</h2>
+<p>Packs live in <a href="https://github.com/martinx/handrail/tree/main/catalog/packs"><code>catalog/packs/</code></a>:</p>
+<pre class="snippet">catalog/packs/my-pack/
+├─ pack.toml                   <span class="c"># metadata, tier, per-agent spec</span>
+├─ rules.md                    <span class="c"># instructions for the agent (English)</span>
+├─ claude-code/
+│  ├─ settings.json            <span class="c"># merged as a managed-settings.d fragment</span>
+│  └─ hooks/guard.sh           <span class="c"># optional</span>
+└─ tests/guard.cases           <span class="c"># hook test vectors</span></pre>
+<pre class="snippet"><span class="k">id</span> = <span class="s">"my-pack"</span>
+<span class="k">version</span> = <span class="s">"1.0.0"</span>
+<span class="k">category</span> = <span class="s">"security"</span>
+<span class="k">tier</span> = <span class="s">"enforced"</span>            <span class="c"># or "advisory": rules.md only</span>
+<span class="k">title</span> = <span class="s">"Short title"</span>
+<span class="k">summary</span> = <span class="s">"One or two sentences."</span>
+<span class="k">protects</span> = [<span class="s">"What it guards against"</span>]
+<span class="k">tradeoffs</span> = [<span class="s">"What the user gives up"</span>]
+<span class="k">limits</span> = <span class="s">"What it cannot do. Required."</span>
+
+[<span class="k">targets.claude-code</span>]
+<span class="k">enforcement</span> = <span class="s">"enforced"</span>     <span class="c"># enforced | partial | advisory | unsupported</span>
+<span class="k">min_version</span> = <span class="s">"2.1.242"</span>      <span class="c"># optional: oldest Claude Code with the keys you use</span>
+<span class="k">settings</span> = <span class="s">"claude-code/settings.json"</span>
+<span class="k">hooks</span> = [<span class="s">"claude-code/hooks/guard.sh"</span>]</pre>
+<p>In <code>settings.json</code>, <code>@PACK_DIR@</code> is replaced with the directory the pack is installed to, so a hook is referenced as <code>"\"@PACK_DIR@/hooks/guard.sh\""</code>. Test vectors are tab-separated lines: name, expected exit code, JSON input.</p>
+<p><code>cargo test</code> validates every pack: required fields, unknown fields and placeholders, settings that are valid JSON objects, scalar keys that clash with another pack, and each hook's test vectors. Only claim <code>enforced</code> for what the agent actually enforces, and keep <code>limits</code> honest — a pack that claims more than it enforces is a bug.</p>
+
+<h2 id="roadmap">Roadmap</h2>
+<table>
+<tr><th>Next</th><th>What</th></tr>
+<tr><td>Registry</td><td>Signed, versioned packs fetched with <code>handrail update</code>: shows a diff, never auto-applies executable content.</td></tr>
+<tr><td>Terminal UI</td><td>Browse and toggle packs by category, with the enforcement matrix.</td></tr>
+<tr><td>More categories</td><td>Communication, git hygiene, code quality, testing, cost.</td></tr>
+<tr><td>More agents</td><td>Chosen by demand, each with a published enforcement matrix.</td></tr>
+</table>
+
+<h2 id="uninstall">Uninstall</h2>
+<pre class="snippet">handrail disable --all                 <span class="c"># remove every pack and rule</span>
+sudo rm /usr/local/bin/handrail        <span class="c"># remove the binary</span></pre>
+<p>A backup of the removed files is kept in your temporary directory until reboot.</p>
+
+<h2 id="faq">FAQ</h2>
+<h3>Is this made by Anthropic?</h3>
+<p>No. Handrail is an unofficial, independent project. It only uses configuration that Claude Code documents.</p>
+<h3>Does Handrail send anything anywhere?</h3>
+<p>No. It has no telemetry and no account. The installer downloads a release; the CLI works offline.</p>
+<h3>Why does it need my password?</h3>
+<p>Because the point is that the agent — running as you — cannot change the policy. The same property means changing it needs administrator rights.</p>
+<h3>What if something goes wrong?</h3>
+<p><code>handrail rollback</code> undoes the last change; <code>handrail disable --all</code> removes everything. Interrupted runs are rolled back automatically.</p>
+</article>
+</div>
+
+<footer class="footer">
+  <div class="wrap">
+    <a class="brand" href="./"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 8h18M6 8v12M18 8v12" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>Handrail</a>
+    <a href="https://github.com/martinx/handrail">GitHub</a>
+    <a href="https://github.com/martinx/handrail/blob/main/LICENSE">Apache-2.0</a>
+    <span class="fine">Handrail is an unofficial project and is not affiliated with, or endorsed by, Anthropic or any other agent vendor.</span>
+  </div>
+</footer>
+<script>
+(function () {
+  var t = document.querySelector("[data-theme-toggle]");
+  if (t) t.addEventListener("click", function () {
+    var root = document.documentElement;
+    var dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark";
+    try { localStorage.setItem("theme", root.dataset.theme); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>

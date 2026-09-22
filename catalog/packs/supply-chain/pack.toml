@@ -9,7 +9,7 @@ protects = [
 ]
 tradeoffs = [
   "Hooks in your own ~/.claude/settings.json stop running too (terminal integrations, custom notifications)",
-  "To keep one of your hooks, package it as a local module",
+  "To keep one of your hooks, package it as a pack of your own",
 ]
 limits = "Does not cover MCP servers or skills shipped in a repository. Inspect an unfamiliar repository's .claude/ directory before working in it."
 
