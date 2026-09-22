@@ -198,7 +198,10 @@ fn removing_everything_leaves_nothing_of_ours() {
     let ids = profile(&c, "paranoid");
     let refs: Vec<&str> = ids.iter().map(String::as_str).collect();
     let mut i = intent(&refs);
-    i.local_rules = vec!["Reply in English".into()];
+    i.local_rules = vec![crate::core::rule::LocalRule {
+        id: "rule-abcd".into(),
+        text: "Reply in English".into(),
+    }];
     run(&e, &c, &i);
     run(&e, &c, &intent(&[]));
     let left: Vec<String> = fs::read_dir(&e.target.managed_root)
@@ -213,7 +216,10 @@ fn local_rules_land_in_the_block() {
     let c = catalog();
     let e = env();
     let mut i = intent(&[]);
-    i.local_rules = vec!["Reply in English".into()];
+    i.local_rules = vec![crate::core::rule::LocalRule {
+        id: "rule-abcd".into(),
+        text: "Reply in English".into(),
+    }];
     run(&e, &c, &i);
     let md = fs::read_to_string(e.target.managed_root.join("CLAUDE.md")).unwrap();
     assert!(

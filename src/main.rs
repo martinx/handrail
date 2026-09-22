@@ -12,6 +12,7 @@ mod show;
 mod update;
 
 use crate::claude::Intent;
+use crate::core::rule;
 use clap::{Args, Parser, Subcommand};
 use context::{Ctx, Overrides};
 use std::path::PathBuf;
@@ -156,17 +157,28 @@ enum Cmd {
 
 #[derive(Subcommand)]
 enum RuleCmd {
-    /// Add a rule
+    /// Add a rule; it gets an id such as rule-7k3m, or the one you choose with --id
     Add {
+        text: String,
+        /// Your own id: lowercase letters, digits and hyphens, at most 32 characters
+        #[arg(long)]
+        id: Option<String>,
+        #[command(flatten)]
+        opts: ChangeOpts,
+    },
+    /// List your rules with their ids
+    List,
+    /// Change a rule's text; its id stays the same
+    Edit {
+        id: String,
         text: String,
         #[command(flatten)]
         opts: ChangeOpts,
     },
-    /// List your rules
-    List,
-    /// Remove a rule by its number in `handrail rule list`
+    /// Remove rules by id
     Remove {
-        number: usize,
+        #[arg(required = true)]
+        ids: Vec<String>,
         #[command(flatten)]
         opts: ChangeOpts,
     },
@@ -279,28 +291,57 @@ fn main() -> ExitCode {
                 if rules.is_empty() {
                     println!("No local rules. Add one: handrail rule add \"...\"");
                 }
+                let w = rules.iter().map(|r| r.id.len()).max().unwrap_or(0);
                 rules
                     .iter()
-                    .enumerate()
-                    .for_each(|(n, r)| println!("{}. {r}", n + 1));
+                    .for_each(|r| println!("{:<w$}  {}", r.id, r.text));
                 Ok(())
             }
-            RuleCmd::Add { text, opts } => {
+            RuleCmd::Add { text, id, opts } => {
                 let mut i = ctx.current_intent();
-                if text.trim().is_empty() {
+                let text = text.trim().to_string();
+                if text.is_empty() {
                     return fail("the rule is empty".into());
                 }
-                i.local_rules.push(text.trim().to_string());
+                let id = match id {
+                    Some(id) => match rule::check_id(&id, &i.local_rules) {
+                        Ok(()) => id,
+                        Err(e) => return fail(e),
+                    },
+                    None => rule::new_id(&i.local_rules, &text),
+                };
+                i.local_rules.push(rule::LocalRule { id, text });
                 change::run(&ctx, i, &(&opts).into())
             }
-            RuleCmd::Remove { number, opts } => {
+            RuleCmd::Edit { id, text, opts } => {
                 let mut i = ctx.current_intent();
-                if number == 0 || number > i.local_rules.len() {
+                let text = text.trim().to_string();
+                if text.is_empty() {
+                    return fail("the rule is empty".into());
+                }
+                match i.local_rules.iter_mut().find(|r| r.id == id) {
+                    Some(r) => r.text = text,
+                    None => return fail(format!("no rule \"{id}\" (see: handrail rule list)")),
+                }
+                change::run(&ctx, i, &(&opts).into())
+            }
+            RuleCmd::Remove { ids, opts } => {
+                let mut i = ctx.current_intent();
+                let unknown: Vec<&String> = ids
+                    .iter()
+                    .filter(|id| !i.local_rules.iter().any(|r| &r.id == *id))
+                    .collect();
+                if !unknown.is_empty() {
                     return fail(format!(
-                        "there is no rule {number} (see: handrail rule list)"
+                        "no rule {} (see: handrail rule list)",
+                        unknown
+                            .iter()
+                            .map(|s| format!("\"{s}\""))
+                            .collect::<Vec<_>>()
+                            .join(", ")
                     ));
                 }
-                i.local_rules.remove(number - 1);
+                i.local_rules.retain(|r| !ids.contains(&r.id));
                 change::run(&ctx, i, &(&opts).into())
             }
         },

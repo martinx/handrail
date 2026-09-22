@@ -94,7 +94,7 @@ handrail use baseline               <span class="c"># apply: confirm, then your 
 <tr><td><code>use &lt;profile&gt;</code></td><td>Make the installed packs exactly this profile. Your own rules are kept.</td></tr>
 <tr><td><code>enable &lt;pack…&gt;</code></td><td>Add packs to what is installed.</td></tr>
 <tr><td><code>disable &lt;pack…&gt;</code></td><td>Remove packs. <code>--all</code> removes every pack and rule and leaves nothing behind.</td></tr>
-<tr><td><code>rule add|list|remove</code></td><td>Your own rules, added to the enforced instructions block.</td></tr>
+<tr><td><code>rule add|list|edit|remove</code></td><td>Your own rules, added to the enforced instructions block. Each has an id (<code>rule-7k3m</code>, or your own with <code>--id</code>) to edit or remove it by.</td></tr>
 <tr><td><code>rollback</code></td><td>Undo the last change.</td></tr>
 <tr><td><code>status</code></td><td>What is installed, and anything that would make it ineffective.</td></tr>
 <tr><td><code>statusline</code></td><td>One line for Claude Code's status line: the matching profile or pack count, and <code>drift</code> when installed files differ from what Handrail wrote. Local reads only.</td></tr>
@@ -166,9 +166,12 @@ handrail use baseline               <span class="c"># apply: confirm, then your 
 </ul>
 
 <h2 id="rules">Your own rules</h2>
-<pre class="snippet">handrail rule add "Reply in English"
-handrail rule list
-handrail rule remove 1</pre>
+<pre class="snippet">handrail rule add "Reply in English"                 <span class="c"># gets an id such as rule-7k3m</span>
+handrail rule add "Small, focused commits" --id commits
+handrail rule list                                   <span class="c"># id and text</span>
+handrail rule edit commits "One logical change per commit"
+handrail rule remove rule-7k3m commits</pre>
+<p>Generated ids are <code>rule-</code> plus four characters from an alphabet without look-alikes (no <code>0 1 i l o</code>). They are random, not derived from the text, so editing a rule keeps its id. Your own ids use lowercase letters, digits and hyphens, up to 32 characters.</p>
 <p>Rules land in the root-owned instructions block, loaded in every session. They are instructions to the model, not enforcement.</p>
 
 <h2 id="packs">Writing a pack</h2>

@@ -184,9 +184,11 @@ Never publish anything to the internet.</pre>
           <h3>Add a rule of your own</h3>
           <p>The quickest extension: one sentence, placed in the root-owned instructions block that every session loads. Good for team conventions that don't need enforcement.</p>
         </div>
-        <pre class="snippet"><span class="p">$</span> handrail rule add &quot;Reply in English. Keep commit messages under 72 characters.&quot;
+        <pre class="snippet"><span class="p">$</span> handrail rule add &quot;Reply in English&quot;                  <span class="c"># id: rule-7k3m</span>
+<span class="p">$</span> handrail rule add &quot;Keep commit subjects under 50 characters&quot; --id commits
 <span class="p">$</span> handrail rule list
-<span class="p">$</span> handrail rule remove 1</pre>
+<span class="p">$</span> handrail rule edit commits &quot;Commit subjects: 50 characters, imperative mood&quot;
+<span class="p">$</span> handrail rule remove rule-7k3m</pre>
       </li>
 
       <li class="guide-step" id="extend-write">

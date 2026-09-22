@@ -162,7 +162,7 @@ fn local_rules_and_rollback() {
     let e = Env::new();
     e.ok(&["use", "baseline", "--yes"]);
     e.ok(&["rule", "add", "Reply in English", "--yes"]);
-    assert!(e.ok(&["rule", "list"]).contains("1. Reply in English"));
+    assert!(e.ok(&["rule", "list"]).contains("  Reply in English"));
     assert!(fs::read_to_string(e.root().join("CLAUDE.md"))
         .unwrap()
         .contains("- Reply in English"));
@@ -615,4 +615,86 @@ fn publish_refuses_built_in_packs() {
     let o = e.run(&["publish", "privacy", "--dry-run"]);
     assert!(!o.status.success());
     assert!(err(&o).contains("built-in pack"), "{}", err(&o));
+}
+
+#[test]
+fn rules_are_referred_to_by_id() {
+    let e = Env::new();
+    e.ok(&["rule", "add", "Reply in English", "--yes"]);
+    e.ok(&["rule", "add", "Small commits", "--id", "commits", "--yes"]);
+    let list = e.ok(&["rule", "list"]);
+    let generated = list
+        .lines()
+        .find(|l| l.contains("Reply in English"))
+        .and_then(|l| l.split_whitespace().next())
+        .unwrap()
+        .to_string();
+    assert!(
+        generated.starts_with("rule-") && generated.len() == 9,
+        "{list}"
+    );
+    assert!(
+        list.lines()
+            .any(|l| l.split_whitespace().collect::<Vec<_>>() == ["commits", "Small", "commits"]),
+        "{list}"
+    );
+
+    // A chosen id must be unused and well-formed; numbers are no longer references
+    assert!(!e
+        .run(&["rule", "add", "x", "--id", "commits", "--yes"])
+        .status
+        .success());
+    assert!(!e
+        .run(&["rule", "add", "x", "--id", "No Spaces", "--yes"])
+        .status
+        .success());
+    assert!(!e.run(&["rule", "remove", "1", "--yes"]).status.success());
+
+    // Editing keeps the id
+    e.ok(&["rule", "edit", &generated, "Reply in Chinese", "--yes"]);
+    let list = e.ok(&["rule", "list"]);
+    assert!(
+        list.contains(&format!("{generated}  Reply in Chinese")),
+        "{list}"
+    );
+    let md = fs::read_to_string(e.root().join("CLAUDE.md")).unwrap();
+    assert!(
+        md.contains("- Reply in Chinese") && !md.contains("Reply in English"),
+        "{md}"
+    );
+
+    e.ok(&["rule", "remove", &generated, "commits", "--yes"]);
+    assert!(e.ok(&["rule", "list"]).contains("No local rules"));
+}
+
+#[test]
+fn rules_from_older_state_get_ids_without_changing_the_installed_files() {
+    let e = Env::new();
+    e.ok(&["rule", "add", "Reply in English", "--yes"]);
+    // Rewrite the state the way 0.2.0 and earlier stored rules: plain strings
+    let path = e.root().join("handrail/state.json");
+    let mut state: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    state["local_rules"] = serde_json::json!(["Reply in English"]);
+    fs::write(&path, serde_json::to_vec_pretty(&state).unwrap()).unwrap();
+    let before = fs::read_to_string(e.root().join("CLAUDE.md")).unwrap();
+
+    let id = e
+        .ok(&["rule", "list"])
+        .split_whitespace()
+        .next()
+        .unwrap()
+        .to_string();
+    assert!(id.starts_with("rule-"));
+    assert_eq!(
+        e.ok(&["rule", "list"]).split_whitespace().next().unwrap(),
+        id,
+        "stable across reads"
+    );
+    assert!(!e.ok(&["status"]).contains('⚠'));
+    e.ok(&["rule", "remove", &id, "--yes"]);
+    assert!(!fs::read_to_string(e.root().join("CLAUDE.md"))
+        .unwrap_or_default()
+        .contains("Reply in English"));
+    let _ = before;
 }

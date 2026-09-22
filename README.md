@@ -59,7 +59,7 @@ handrail use baseline --dry-run       # the exact files a change would write; wr
 handrail use baseline                 # apply (asks for confirmation, then your password once)
 handrail enable secrets               # add a pack
 handrail disable audit                # remove a pack
-handrail rule add "Reply in English"  # your own rule, added to the enforced instructions
+handrail rule add "Reply in English"  # your own rule (id rule-7k3m, or --id <name>); edit/remove it by id
 handrail rollback                     # undo the last change
 handrail status                       # what is installed, and anything that would make it ineffective
 handrail doctor                       # checks, including tampering with installed files

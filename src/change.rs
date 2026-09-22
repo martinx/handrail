@@ -95,18 +95,17 @@ fn describe(ctx: &Ctx, old: &Intent, new: &Intent, plans: &Plans) {
             .unwrap_or("");
         println!("\n- {id}  {title}");
     }
-    let (ra, rr) = (
-        new.local_rules
-            .iter()
-            .filter(|r| !old.local_rules.contains(r))
-            .count(),
-        old.local_rules
-            .iter()
-            .filter(|r| !new.local_rules.contains(r))
-            .count(),
-    );
-    if ra + rr > 0 {
-        println!("\nLocal rules: {ra} added, {rr} removed");
+    for r in &new.local_rules {
+        match old.local_rules.iter().find(|o| o.id == r.id) {
+            None => println!("\n+ rule {}  {}", r.id, r.text),
+            Some(o) if o.text != r.text => println!("\n~ rule {}  {}", r.id, r.text),
+            Some(_) => {}
+        }
+    }
+    for o in &old.local_rules {
+        if !new.local_rules.iter().any(|r| r.id == o.id) {
+            println!("\n- rule {}  {}", o.id, o.text);
+        }
     }
     for s in &plans.skipped {
         println!("\n! skipped {}: {}", s.id, s.reason);
