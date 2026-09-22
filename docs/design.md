@@ -164,7 +164,7 @@ sign releases; contributors never need signing keys.
 | Own Homebrew tap | `brew install martinx/tap/handrail` | From the first release. After `brew tap martinx/tap`, `brew install handrail` also works as long as homebrew-core has no formula of that name (it has none today) |
 | homebrew-core | `brew install handrail` | Once eligible. Homebrew's Package Acceptance Policy: at least 30 forks, 30 watchers or 75 stars — or 90 / 90 / 225 when the repository owner submits it — and a repository at least 30 days old. Prefer a submission by a user |
 | crates.io | `cargo install handrail` | From the first release |
-| Install script | `curl -fsSL https://handrail.sh \| sh` | Downloads a pinned release and verifies its checksum and signature |
+| Install script | `curl -fsSL https://handrail.bitey.ai/install.sh \| sh` | Downloads a pinned release and verifies its checksum and signature. Interim domain; moves to `handrail.sh` once registered |
 
 Constraints this puts on the design:
 

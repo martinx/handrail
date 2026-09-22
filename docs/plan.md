@@ -13,7 +13,8 @@
 
 | Task | Who | Size | Notes |
 |---|---|---|---|
-| Register `handrail.sh` (optionally `gethandrail.dev`) | maintainer | S | The only resource someone else could take with no good substitute |
+| Register `handrail.sh` (optionally `gethandrail.dev`) | maintainer | S | The only resource someone else could take with no good substitute. Until then the site uses `handrail.bitey.ai` |
+| Point `handrail.bitey.ai` at GitHub Pages: verify `bitey.ai` in GitHub first, then add `handrail CNAME martinx.github.io.` | maintainer | S | Verification first prevents subdomain takeover while the CNAME points at GitHub before our Pages site exists |
 | Reserve the `handrail` crate: publish a minimal, real 0.0.1 | maintainer creates the token; publish after approval | S | Must be a working binary that points to the repository, not an empty placeholder |
 | Install M0 `baseline` on the maintainer's machine and use it daily | maintainer | S | Real use surfaces friction before anyone else sees it |
 | Decide when the repository goes public | maintainer | — | homebrew-core counts repository age (30 days minimum), so an earlier public repo starts the clock earlier |
@@ -40,15 +41,15 @@ and Linux x64 pass CI.
 
 ## M2 — Distribution, remote registry, UI
 
-**Blocked on:** `handrail.sh`, a public repository, a crates.io token, a signing key.
+**Blocked on:** a public repository (GitHub Pages on a free plan needs one), a signing key. The site starts on `handrail.bitey.ai`; `handrail.sh` replaces it once registered.
 
 | # | Task | Size |
 |---|---|---|
 | 1 | Release workflow: build matrix, checksums, minisign signatures, GitHub Release, crates.io publish, `martinx/homebrew-tap` formula update | M |
 | 2 | Registry repository layout (packs + `index.json` + signature); `handrail update`: check, diff, approve; pinned versions; `--registry <url|path>` mirrors | L |
-| 3 | `curl -fsSL https://handrail.sh \| sh`: bootstrap that downloads a pinned binary and verifies checksum and signature | S |
+| 3 | `curl -fsSL https://handrail.bitey.ai/install.sh \| sh` (later `handrail.sh`): bootstrap that downloads a pinned binary and verifies checksum and signature | S |
 | 4 | Terminal UI (`handrail ui`): categories, tier badges, enforcement matrix, toggles; enforced toggles go through the admin prompt | L |
-| 5 | Website on `handrail.sh`: landing page, catalog generated from the registry, configurator that outputs the exact command. Static; no third-party requests | M |
+| 5 | Website on `handrail.bitey.ai` (later `handrail.sh`): landing page, catalog generated from the registry, configurator that outputs the exact command. Static; no third-party requests | M |
 | 6 | Contributing: `CONTRIBUTING.md`, pack template, PR validation in CI, CODEOWNERS requiring two maintainers for packs with executable hooks | M |
 
 **Exit criteria:** a user on a clean Mac goes from the website to an installed, verified
