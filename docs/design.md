@@ -157,13 +157,30 @@ sign releases; contributors never need signing keys.
   build-time error (later file silently wins at runtime otherwise). Detect other managed
   sources (MDM, server-managed) that would make file-based policy ineffective and say so.
 
-## 9. Internationalisation
+## 9. Distribution
+
+| Channel | Command | When |
+|---|---|---|
+| Own Homebrew tap | `brew install martinx/tap/handrail` | From the first release. After `brew tap martinx/tap`, `brew install handrail` also works as long as homebrew-core has no formula of that name (it has none today) |
+| homebrew-core | `brew install handrail` | Once eligible. Homebrew's Package Acceptance Policy: at least 30 forks, 30 watchers or 75 stars — or 90 / 90 / 225 when the repository owner submits it — and a repository at least 30 days old. Prefer a submission by a user |
+| crates.io | `cargo install handrail` | From the first release |
+| Install script | `curl -fsSL https://handrail.sh \| sh` | Downloads a pinned release and verifies its checksum and signature |
+
+Constraints this puts on the design:
+
+- **No self-updating binary.** Homebrew requires self-update to be disabled; upgrades go through
+  the package manager that installed the binary. Rule-pack updates are a separate data channel
+  (the signed index, §6), not a binary update.
+- **An open-source licence compatible with the Debian Free Software Guidelines** (MIT and
+  Apache-2.0 both qualify), stable tagged releases, and a build from source.
+
+## 10. Internationalisation
 
 English is the source of truth for code, docs, pack metadata and agent-facing rules.
 Translations are optional overlays (`i18n/<locale>.toml`) for human-facing text only.
 Agent-facing `rules.md` stays English by default; users can add local rules in any language.
 
-## 10. Roadmap
+## 11. Roadmap
 
 | Milestone | Scope |
 |---|---|
@@ -173,7 +190,7 @@ Agent-facing `rules.md` stays English by default; users can add local rules in a
 | **M3** | Non-security categories seeded (communication, git, quality, cost); user-defined profiles; import/export |
 | **M4** | Second target adapter, chosen by demand, with a published enforcement matrix |
 
-## 11. Risks
+## 12. Risks
 
 - **Supply chain** (see §6). Non-negotiable: signing, review, no auto-apply for executable content.
 - **Fast-moving agent settings.** Keys appear and change frequently; adapters must be
@@ -182,7 +199,7 @@ Agent-facing `rules.md` stays English by default; users can add local rules in a
 - **Trademarks.** Do not use agent vendors' names or marks in the product name; state clearly
   that the project is unofficial.
 
-## 12. Open questions
+## 13. Open questions
 
 1. ~~Product name~~ — decided: Handrail. Repository under the maintainer's personal account (`martinx/handrail`); the `handrail` GitHub name is taken.
 2. License: MIT or Apache-2.0 (Apache-2.0 adds an explicit patent grant).
