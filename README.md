@@ -71,4 +71,6 @@ sh tests/run.sh    # runs in a temporary directory; no root, touches nothing on 
 
 ## License
 
-To be decided (MIT or Apache-2.0).
+[Apache License 2.0](LICENSE). Contributions are accepted under the same license
+(Section 5), so no separate contributor agreement is needed. The license does not grant
+rights to the Handrail name (Section 6); see [NOTICE](NOTICE).

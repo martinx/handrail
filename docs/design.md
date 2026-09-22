@@ -202,6 +202,9 @@ Agent-facing `rules.md` stays English by default; users can add local rules in a
 ## 13. Open questions
 
 1. ~~Product name~~ — decided: Handrail. Repository under the maintainer's personal account (`martinx/handrail`); the `handrail` GitHub name is taken.
-2. License: MIT or Apache-2.0 (Apache-2.0 adds an explicit patent grant).
+2. ~~License~~ — decided: **Apache-2.0**. Explicit patent grant for organisations deploying
+   policy fleet-wide; contributions are inbound=outbound (Section 5), so community packs need no
+   CLA; Section 6 withholds trademark rights, protecting the project name; accepted by Homebrew
+   and crates.io.
 3. Registry host: a public GitHub repo, with mirrors allowed.
 4. Which second agent to support first — decided by user demand after v1.
