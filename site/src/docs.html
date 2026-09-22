@@ -55,6 +55,14 @@ sh install.sh</pre>
 <h3>Verify provenance</h3>
 <p>Release archives carry a signed build-provenance attestation. With the GitHub CLI:</p>
 <pre class="snippet">gh attestation verify handrail-aarch64-apple-darwin.tar.gz --repo martinx/handrail</pre>
+<h3>Homebrew and cargo</h3>
+<pre class="snippet">brew install martinx/tap/handrail
+cargo install handrail</pre>
+<div class="note warn"><p>Both install into a directory your user can write (the Homebrew prefix, <code>~/.cargo/bin</code>). For enforced policy, the install script above is the safer choice.</p></div>
+<h3>Update</h3>
+<pre class="snippet">handrail self-update --check     <span class="c"># is there a newer release?</span>
+handrail self-update             <span class="c"># update</span></pre>
+<p>Script installs are updated with the same checksum-verified installer, pinned to the version just reported. Homebrew and cargo installs are pointed at <code>brew upgrade handrail</code> and <code>cargo install handrail</code>: package managers own their files. <code>self-update</code> is the only command that uses the network, and only when you run it.</p>
 <h3>From source</h3>
 <pre class="snippet">git clone https://github.com/martinx/handrail && cd handrail
 cargo build --release
@@ -79,6 +87,8 @@ handrail use baseline               <span class="c"># apply: confirm, then your 
 <tr><td><code>rule add|list|remove</code></td><td>Your own rules, added to the enforced instructions block.</td></tr>
 <tr><td><code>rollback</code></td><td>Undo the last change.</td></tr>
 <tr><td><code>status</code></td><td>What is installed, and anything that would make it ineffective.</td></tr>
+<tr><td><code>statusline</code></td><td>One line for Claude Code's status line: the matching profile or pack count, and <code>drift</code> when installed files differ from what Handrail wrote. Local reads only.</td></tr>
+<tr><td><code>self-update [--check]</code></td><td>Update Handrail itself to the latest release.</td></tr>
 <tr><td><code>doctor</code></td><td>Checks: Claude Code present, binary not user-writable, no overriding policy sources, no interrupted runs, no tampering.</td></tr>
 </table>
 <p>Every command that changes something accepts <code>--dry-run</code> (show the plan, write nothing) and <code>--yes</code> (skip the confirmation prompt; the password prompt remains).</p>
@@ -128,6 +138,11 @@ handrail use baseline               <span class="c"># apply: confirm, then your 
 <li><strong>Behaviour:</strong> with <code>privacy</code>, asking for an Artifact is refused with a Handrail message; with <code>anti-bypass</code>, <code>claude --dangerously-skip-permissions</code> is refused; with <code>audit</code>, tool calls appear in <code>~/.claude/handrail/audit/</code>.</li>
 <li><strong>Integrity:</strong> <code>handrail doctor</code> re-plans what is installed. Any difference means files were edited, deleted or replaced.</li>
 </ul>
+
+<h3>In Claude Code's status line</h3>
+<p>Claude Code runs a command of your choice to draw its status line (<code>statusLine</code> in <code>~/.claude/settings.json</code>). Add Handrail's segment to it:</p>
+<pre class="snippet">"statusLine": { "type": "command", "command": "handrail statusline" }</pre>
+<p>If you already have a status line script, append <code>$(handrail statusline)</code> to its output. It prints e.g. <code>handrail: baseline ✓</code>, or <code>drift ⚠</code> when installed files were changed.</p>
 
 <h2 id="limits">Limits</h2>
 <ul>

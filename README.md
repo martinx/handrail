@@ -7,7 +7,7 @@ locally. It starts with Claude Code and security, and is designed to grow to mor
 more categories. See [docs/design.md](docs/design.md) and [docs/plan.md](docs/plan.md).
 
 > Unofficial project. Not affiliated with, or endorsed by, Anthropic or any agent vendor.
-> Status: **M1 (pre-release)** — a Rust CLI for Claude Code on macOS and Linux.
+> Status: **0.1** — a Rust CLI for Claude Code on macOS and Linux.
 
 ## Why
 
@@ -17,17 +17,21 @@ first kind, and nothing tells you which is which. Handrail installs the second k
 the agent supports it, and every pack states what it protects, what it costs you, and what
 it cannot do.
 
-## Install (from source, until the first release)
+## Install
 
 ```sh
-git clone https://github.com/martinx/handrail && cd handrail
-cargo build --release
-sudo install -m 755 target/release/handrail /usr/local/bin/handrail
+curl -fsSL https://handrail.bitey.ai/install.sh | sh   # recommended
+brew install martinx/tap/handrail
+cargo install handrail
 ```
 
-Install it somewhere **only root can write**. Handrail runs itself through `sudo` to change
-enforced policy; a binary your user can overwrite could be replaced by anything running as
-you before `sudo` runs it. `handrail doctor` checks this.
+The install script checks the release's SHA-256 and installs to `/usr/local/bin`, which only
+root can write. That matters: Handrail runs itself through `sudo` to change enforced policy,
+and a binary your user can overwrite (the Homebrew prefix, `~/.cargo/bin`) could be replaced
+by anything running as you before `sudo` runs it. `handrail doctor` checks this.
+
+Update with `handrail self-update` (Homebrew and cargo installs are pointed at their own
+upgrade command).
 
 ## Use
 
@@ -42,6 +46,8 @@ handrail rule add "Reply in English"  # your own rule, added to the enforced ins
 handrail rollback                     # undo the last change
 handrail status                       # what is installed, and anything that would make it ineffective
 handrail doctor                       # checks, including tampering with installed files
+handrail statusline                   # one line for Claude Code's status line
+handrail self-update                  # update handrail itself
 handrail disable --all                # remove everything; nothing of Handrail's is left behind
 ```
 
@@ -89,7 +95,7 @@ alone, and removing Handrail's block from `CLAUDE.md` restores the original byte
 
 ## Contributing
 
-Packs live in [`catalog/`](catalog/): `pack.toml`, `rules.md`, per-agent settings and hooks,
+Releasing: [docs/RELEASING.md](docs/RELEASING.md). Packs live in [`catalog/`](catalog/): `pack.toml`, `rules.md`, per-agent settings and hooks,
 and hook test vectors. `cargo test` validates every pack and runs its vectors.
 
 ## License

@@ -1,6 +1,14 @@
 name: release
 
-# Tag a version (git tag v0.1.0 && git push origin v0.1.0) to build and publish binaries.
+# Tag a version to publish it everywhere:
+#   git tag -a v0.1.2 -m "..." && git push origin v0.1.2
+#
+# Channels (see docs/RELEASING.md):
+#   1. GitHub Release: binaries for 4 targets, SHA256SUMS, build-provenance attestations
+#      (install.sh and `handrail self-update` download from here)
+#   2. crates.io: `cargo install handrail` (trusted publishing, no stored token)
+#   3. Homebrew tap: `brew install martinx/tap/handrail` (formula regenerated from SHA256SUMS)
+#   4. Website: redeployed by pages.yml on the same tag (shows the new version)
 on:
   push:
     tags: ["v*"]
@@ -35,11 +43,11 @@ jobs:
         shell: bash
         run: |
           want="${GITHUB_REF_NAME#v}"
-          have=$(grep -m1 '^version' crates/handrail/Cargo.toml | cut -d'"' -f2)
-          [ "$want" = "$have" ] || { echo "tag $GITHUB_REF_NAME does not match crate version $have"; exit 1; }
-      - run: cargo test --all --locked
+          have=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          [ "$want" = "$have" ] || { echo "tag $GITHUB_REF_NAME does not match Cargo.toml version $have"; exit 1; }
+      - run: cargo test --locked
         if: matrix.target != 'x86_64-apple-darwin'   # same runner as the aarch64 job, which already ran them
-      - run: cargo build --release --locked --target ${{ matrix.target }} -p handrail
+      - run: cargo build --release --locked --target ${{ matrix.target }}
       - name: package
         shell: bash
         run: |
@@ -54,7 +62,7 @@ jobs:
           name: handrail-${{ matrix.target }}
           path: handrail-${{ matrix.target }}.tar.gz
 
-  publish:
+  github-release:
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -74,10 +82,60 @@ jobs:
             echo "Install or upgrade:"
             echo
             echo '    curl -fsSL https://handrail.bitey.ai/install.sh | sh'
+            echo '    brew install martinx/tap/handrail'
+            echo '    cargo install handrail'
             echo
             echo "Every archive has a build-provenance attestation. To verify one:"
             echo
             echo "    gh attestation verify handrail-<target>.tar.gz --repo $GITHUB_REPOSITORY"
           } > notes.md
           gh release create "$GITHUB_REF_NAME" artifacts/* \
-            --repo "$GITHUB_REPOSITORY" --title "Handrail $GITHUB_REF_NAME" --notes-file notes.md
+            --repo "$GITHUB_REPOSITORY" --title "Handrail $GITHUB_REF_NAME" \
+            --notes-file notes.md --generate-notes
+
+  crates-io:
+    needs: github-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write      # crates.io trusted publishing: a short-lived token per run
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: rust-lang/crates-io-auth-action@v1
+        id: auth
+      - run: cargo publish --locked
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+  homebrew:
+    needs: github-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: render the formula from this release's checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" -p SHA256SUMS
+          python3 packaging/homebrew/render.py "${GITHUB_REF_NAME#v}" SHA256SUMS > handrail.rb
+          cat handrail.rb
+      - name: push to martinx/homebrew-tap
+        env:
+          # Deploy key with write access to martinx/homebrew-tap only
+          DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/tap && chmod 600 ~/.ssh/tap
+          # GitHub's published ed25519 host key (https://api.github.com/meta), pinned rather than trusted on first use
+          echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" > ~/.ssh/known_hosts
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/tap -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+          git clone git@github.com:martinx/homebrew-tap.git tap
+          cp handrail.rb tap/Formula/handrail.rb
+          cd tap
+          git config user.name "handrail release"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/handrail.rb
+          git diff --cached --quiet && { echo "formula unchanged"; exit 0; }
+          git commit -m "handrail ${GITHUB_REF_NAME#v}"
+          git push origin main

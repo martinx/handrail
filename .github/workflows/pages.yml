@@ -5,7 +5,8 @@ name: pages
 on:
   push:
     branches: [main]
-    paths: ["site/**", "catalog/**", "crates/**", ".github/workflows/pages.yml"]
+    tags: ["v*"]            # a release changes the version shown on the site
+    paths: ["site/**", "catalog/**", "src/**", "Cargo.toml", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -23,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo build --locked -p handrail
+      - run: cargo build --locked
       - run: ./target/debug/handrail __catalog-json > catalog.json
       - run: python3 site/build.py catalog.json
       - uses: actions/upload-pages-artifact@v3
