@@ -4,6 +4,121 @@ use crate::context::Ctx;
 use std::path::Path;
 
 const REPO: &str = "martinx/handrail";
+const CHECK_INTERVAL_SECS: u64 = 24 * 60 * 60;
+
+/// The opt-in daily update check. Off unless you turn it on with `self-update --auto on`.
+///
+/// When on, `handrail statusline` shows `↑<version>` if a newer release exists. The status
+/// line runs often, so it never waits on the network: it reads this cache, and when the cache
+/// is older than a day it starts a background refresh and returns immediately. That refresh
+/// is one GET to api.github.com per day — the only network traffic this adds.
+#[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
+struct UpdateCheck {
+    enabled: bool,
+    checked_at: u64,
+    latest: Option<String>,
+}
+
+fn cache_path(ctx: &Ctx) -> std::path::PathBuf {
+    ctx.target.user_dir.join("handrail/update-check.json")
+}
+
+fn read_cache(ctx: &Ctx) -> UpdateCheck {
+    std::fs::read(cache_path(ctx))
+        .ok()
+        .and_then(|b| serde_json::from_slice(&b).ok())
+        .unwrap_or_default()
+}
+
+fn write_cache(ctx: &Ctx, c: &UpdateCheck) {
+    let p = cache_path(ctx);
+    if let Some(dir) = p.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let _ = std::fs::write(&p, serde_json::to_vec_pretty(c).unwrap_or_default());
+}
+
+fn now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+/// Turn the daily check on or off.
+pub fn set_auto(ctx: &Ctx, on: bool) -> Result<(), String> {
+    let mut c = read_cache(ctx);
+    c.enabled = on;
+    if !on {
+        c.latest = None;
+        write_cache(ctx, &c);
+        println!("Daily update check is off. Handrail makes no network requests unless you run self-update.");
+        return Ok(());
+    }
+    // Check once now, so the status line is right from the start
+    c.latest = latest_release()
+        .ok()
+        .map(|t| t.trim_start_matches('v').to_string());
+    c.checked_at = now();
+    write_cache(ctx, &c);
+    println!("Daily update check is on: at most one request a day to api.github.com.");
+    println!("When a newer release exists, `handrail statusline` shows ↑<version>. Nothing is installed automatically.");
+    match &c.latest {
+        Some(l) if newer_than_current(l) => {
+            println!("A newer release is available now: {l}. Update with: handrail self-update")
+        }
+        Some(_) => println!("You are on the latest release."),
+        None => println!("(Could not reach GitHub just now; it will try again tomorrow.)"),
+    }
+    Ok(())
+}
+
+/// Background refresh started by `statusline`. Silent; failures just wait for tomorrow.
+pub fn refresh_cache(ctx: &Ctx) {
+    let mut c = read_cache(ctx);
+    if !c.enabled {
+        return;
+    }
+    if let Ok(t) = latest_release() {
+        c.latest = Some(t.trim_start_matches('v').to_string());
+    }
+    c.checked_at = now();
+    write_cache(ctx, &c);
+}
+
+fn newer_than_current(latest: &str) -> bool {
+    crate::core::version::at_least(crate::change::VERSION, latest) == Some(false)
+}
+
+/// `↑0.1.2` when the cache knows of a newer release; starts a background refresh when the
+/// cache is stale. Never blocks.
+fn update_hint(ctx: &Ctx) -> String {
+    let mut c = read_cache(ctx);
+    if !c.enabled {
+        return String::new();
+    }
+    if now().saturating_sub(c.checked_at) > CHECK_INTERVAL_SECS {
+        // Claim this round first, so a status line redrawn every second starts one refresh, not many
+        c.checked_at = now();
+        write_cache(ctx, &c);
+        if let Ok(exe) = std::env::current_exe() {
+            let mut cmd = std::process::Command::new(exe);
+            cmd.arg("__refresh-update-check");
+            if ctx.custom_paths {
+                cmd.arg("--user-dir").arg(&ctx.target.user_dir);
+            }
+            let _ = cmd
+                .stdin(std::process::Stdio::null())
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .spawn();
+        }
+    }
+    match c.latest {
+        Some(l) if newer_than_current(&l) => format!(" ↑{l}"),
+        _ => String::new(),
+    }
+}
 const INSTALLER: &str = "https://handrail.bitey.ai/install.sh";
 
 /// How this binary was installed decides who is allowed to update it.
@@ -55,10 +170,16 @@ fn latest_release() -> Result<String, String> {
         .ok_or_else(|| "GitHub reported no release".into())
 }
 
-pub fn self_update(check_only: bool) -> Result<(), String> {
+pub fn self_update(ctx: &Ctx, check_only: bool) -> Result<(), String> {
     let current = crate::change::VERSION;
     let tag = latest_release()?;
     let latest = tag.trim_start_matches('v');
+    let mut c = read_cache(ctx);
+    if c.enabled {
+        c.latest = Some(latest.to_string());
+        c.checked_at = now();
+        write_cache(ctx, &c);
+    }
     let newer = crate::core::version::at_least(current, latest) == Some(false);
     if !newer {
         if current == latest {
@@ -110,12 +231,13 @@ pub fn self_update(check_only: bool) -> Result<(), String> {
 /// `handrail: baseline ✓`, `handrail: 4 packs ✓`, `handrail: drift ⚠`, `handrail: off`
 pub fn statusline(ctx: &Ctx) -> String {
     let intent = ctx.current_intent();
+    let hint = update_hint(ctx);
     if intent.packs.is_empty() && intent.local_rules.is_empty() {
-        return "handrail: off".into();
+        return format!("handrail: off{hint}");
     }
     for root in [&ctx.target.managed_root, &ctx.target.user_dir] {
         if root.join(crate::core::apply::JOURNAL).exists() {
-            return "handrail: interrupted ⚠".into();
+            return format!("handrail: interrupted ⚠{hint}");
         }
     }
     let label = ctx
@@ -143,8 +265,8 @@ pub fn statusline(ctx: &Ctx) -> String {
         })
         .unwrap_or(true);
     if drift {
-        format!("handrail: {label} drift ⚠")
+        format!("handrail: {label} drift ⚠{hint}")
     } else {
-        format!("handrail: {label} ✓")
+        format!("handrail: {label} ✓{hint}")
     }
 }

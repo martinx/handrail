@@ -108,9 +108,15 @@ enum Cmd {
         /// Only report whether a newer release exists
         #[arg(long)]
         check: bool,
+        /// Daily update check shown in the status line (off by default; no install happens)
+        #[arg(long, value_name = "on|off", value_parser = ["on", "off"])]
+        auto: Option<String>,
     },
     /// One line for Claude Code's status line (see the docs)
     Statusline,
+    /// Background refresh of the daily update check (started by statusline)
+    #[command(name = "__refresh-update-check", hide = true)]
+    RefreshUpdateCheck,
     /// The built-in catalog as JSON (used to build the website)
     #[command(name = "__catalog-json", hide = true)]
     CatalogJson,
@@ -166,7 +172,14 @@ fn main() -> ExitCode {
             show::status(&ctx);
             Ok(())
         }
-        Cmd::SelfUpdate { check } => update::self_update(check),
+        Cmd::SelfUpdate { check, auto } => match auto.as_deref() {
+            Some(v) => update::set_auto(&ctx, v == "on"),
+            None => update::self_update(&ctx, check),
+        },
+        Cmd::RefreshUpdateCheck => {
+            update::refresh_cache(&ctx);
+            Ok(())
+        }
         Cmd::Statusline => {
             println!("{}", update::statusline(&ctx));
             Ok(())

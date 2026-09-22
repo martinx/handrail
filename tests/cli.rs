@@ -326,3 +326,36 @@ fn statusline_reports_profile_packs_drift_and_off() {
     .unwrap();
     assert_eq!(e.ok(&["statusline"]).trim(), "handrail: 4 packs drift ⚠");
 }
+
+#[test]
+fn statusline_shows_a_newer_release_only_when_the_check_is_on() {
+    let e = Env::new();
+    e.ok(&["use", "baseline", "--yes"]);
+    let cache = e.user().join("handrail/update-check.json");
+    fs::create_dir_all(cache.parent().unwrap()).unwrap();
+    let recent = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    // off (the default): no hint, even if a newer version is cached
+    fs::write(
+        &cache,
+        format!(r#"{{"enabled": false, "checked_at": {recent}, "latest": "9.9.9"}}"#),
+    )
+    .unwrap();
+    assert_eq!(e.ok(&["statusline"]).trim(), "handrail: baseline ✓");
+    // on, recent cache: shows the hint without touching the network
+    fs::write(
+        &cache,
+        format!(r#"{{"enabled": true, "checked_at": {recent}, "latest": "9.9.9"}}"#),
+    )
+    .unwrap();
+    assert_eq!(e.ok(&["statusline"]).trim(), "handrail: baseline ✓ ↑9.9.9");
+    // on, but the cached release is not newer: no hint
+    fs::write(
+        &cache,
+        format!(r#"{{"enabled": true, "checked_at": {recent}, "latest": "0.0.1"}}"#),
+    )
+    .unwrap();
+    assert_eq!(e.ok(&["statusline"]).trim(), "handrail: baseline ✓");
+}

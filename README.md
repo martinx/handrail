@@ -46,7 +46,8 @@ and a binary your user can overwrite (the Homebrew prefix, `~/.cargo/bin`) could
 anything running as you before `sudo` runs it. `handrail doctor` checks this.
 
 Update with `handrail self-update` (Homebrew and cargo installs are pointed at their own
-upgrade command).
+upgrade command). `handrail self-update --auto on` adds a daily check, shown as `↑<version>`
+in `handrail statusline`; it is off by default and never installs anything by itself.
 
 ## Use
 

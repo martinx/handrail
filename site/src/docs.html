@@ -67,7 +67,11 @@ sh install.sh</pre>
 <h3>Update</h3>
 <pre class="snippet">handrail self-update --check     <span class="c"># is there a newer release?</span>
 handrail self-update             <span class="c"># update</span></pre>
-<p>Script installs are updated with the same checksum-verified installer, pinned to the version just reported. Homebrew and cargo installs are pointed at <code>brew upgrade handrail</code> and <code>cargo install handrail</code>: package managers own their files. <code>self-update</code> is the only command that uses the network, and only when you run it.</p>
+<p>Script installs are updated with the same checksum-verified installer, pinned to the version just reported. Homebrew and cargo installs are pointed at <code>brew upgrade handrail</code> and <code>cargo install handrail</code>: package managers own their files.</p>
+<h3>Be told about new releases</h3>
+<pre class="snippet">handrail self-update --auto on    <span class="c"># off by default</span></pre>
+<p>With the daily check on, <code>handrail statusline</code> shows <code>↑0.1.2</code> when a newer release exists. It never installs anything — updating stays one command you run. The status line never waits on the network: it reads a cached answer, and refreshes it in the background at most once a day with a single request to <code>api.github.com</code>. Turn it off with <code>--auto off</code>. With it off, Handrail uses the network only when you run <code>self-update</code>.</p>
+<p>Why no automatic install: Handrail runs with administrator rights, so an automatic update would turn a compromised release channel into code running as root on every machine. Homebrew also requires software not to update itself.</p>
 <h3>From source</h3>
 <pre class="snippet">git clone https://github.com/martinx/handrail && cd handrail
 cargo build --release
@@ -93,7 +97,7 @@ handrail use baseline               <span class="c"># apply: confirm, then your 
 <tr><td><code>rollback</code></td><td>Undo the last change.</td></tr>
 <tr><td><code>status</code></td><td>What is installed, and anything that would make it ineffective.</td></tr>
 <tr><td><code>statusline</code></td><td>One line for Claude Code's status line: the matching profile or pack count, and <code>drift</code> when installed files differ from what Handrail wrote. Local reads only.</td></tr>
-<tr><td><code>self-update [--check]</code></td><td>Update Handrail itself to the latest release.</td></tr>
+<tr><td><code>self-update [--check] [--auto on|off]</code></td><td>Update Handrail itself to the latest release; <code>--auto on</code> enables a daily check shown in the status line (nothing is installed automatically).</td></tr>
 <tr><td><code>doctor</code></td><td>Checks: Claude Code present, binary not user-writable, no overriding policy sources, no interrupted runs, no tampering.</td></tr>
 </table>
 <p>Every command that changes something accepts <code>--dry-run</code> (show the plan, write nothing) and <code>--yes</code> (skip the confirmation prompt; the password prompt remains).</p>
