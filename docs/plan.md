@@ -3,7 +3,13 @@
 > Companion to [design.md](design.md). Sizes are rough (S ≈ ½ day, M ≈ 1–2 days, L ≈ 3+ days).
 > "Blocked on" names the external step a milestone waits for.
 
-## Where we are — M0 (done)
+## Where we are
+
+**M1 steps 1–8 done** (2026-09-22): the Rust CLI replaces the shell prototype, which has
+been removed. 44 tests. Remaining for the M1 exit criteria: CI on real macOS and Linux runners
+(needs the repository on GitHub) and a first install on a real machine with `sudo`.
+
+## M0 (done)
 
 - POSIX-sh installer for Claude Code: 8 security modules, 3 profiles, install / uninstall /
   status / dry-run / local rules. 58 tests, all in a temporary directory.
@@ -69,6 +75,12 @@ baseline in under two minutes, and every downloaded artifact is signature-checke
 Chosen by user demand after M2. For that agent: document its configuration and enforcement
 surface from its own documentation, implement the adapter, publish the enforcement matrix
 (enforced / partial / advisory / unsupported per pack). Size L per agent.
+
+## Carried into M2
+
+- The published crate must contain the catalog: `include_dir!` currently reads
+  `../../catalog`, which `cargo publish` does not package. Move the catalog into the crate or
+  generate it at build time before the next crates.io release.
 
 ## Standing work
 

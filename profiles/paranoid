@@ -1,9 +1,0 @@
-# Paranoid: adds the OS-level sandbox and runs only your own hooks. Changes daily use; read each module's tradeoffs first.
-10-privacy
-20-anti-bypass
-30-secrets
-40-destructive
-50-supply-chain
-60-audit
-70-retention
-80-sandbox

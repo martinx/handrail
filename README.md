@@ -4,55 +4,79 @@
 
 Handrail lets you browse, enable and disable rule packs for the coding agents you run
 locally. It starts with Claude Code and security, and is designed to grow to more agents and
-more categories. See [docs/design.md](docs/design.md).
+more categories. See [docs/design.md](docs/design.md) and [docs/plan.md](docs/plan.md).
 
 > Unofficial project. Not affiliated with, or endorsed by, Anthropic or any agent vendor.
-> Status: **prototype (M0)** — a POSIX-sh installer for Claude Code.
+> Status: **M1 (pre-release)** — a Rust CLI for Claude Code on macOS and Linux.
 
 ## Why
 
 A line in an instructions file is a *request* to the model. A setting evaluated by the
 agent's harness, a hook, or an OS sandbox is *enforcement*. Most "agent rules" today are the
 first kind, and nothing tells you which is which. Handrail installs the second kind wherever
-the agent supports it, and every module states what it protects, what it costs you, and what
+the agent supports it, and every pack states what it protects, what it costs you, and what
 it cannot do.
 
-## Quick start (Claude Code, macOS or Linux)
+## Install (from source, until the first release)
 
 ```sh
 git clone https://github.com/martinx/handrail && cd handrail
-sh install.sh --list                          # profiles and modules
-sh install.sh --profile baseline --dry-run    # show the plan; writes nothing
-sudo sh install.sh --profile baseline         # install (asks for your password once)
-sh install.sh --status                        # what is installed, and whether anything overrides it
-sudo sh install.sh --uninstall --all          # remove everything
+cargo build --release
+sudo install -m 755 target/release/handrail /usr/local/bin/handrail
 ```
 
-Then start a new `claude` session and run `/status`: the managed source should appear under
-"Setting sources". `claude doctor` shows the same.
+Install it somewhere **only root can write**. Handrail runs itself through `sudo` to change
+enforced policy; a binary your user can overwrite could be replaced by anything running as
+you before `sudo` runs it. `handrail doctor` checks this.
+
+## Use
+
+```sh
+handrail list                         # packs by category, with how strongly Claude Code enforces each
+handrail show secrets                 # what a pack protects, its tradeoffs and its limits
+handrail use baseline --dry-run       # the exact files a change would write; writes nothing
+handrail use baseline                 # apply (asks for confirmation, then your password once)
+handrail enable secrets               # add a pack
+handrail disable audit                # remove a pack
+handrail rule add "Reply in English"  # your own rule, added to the enforced instructions
+handrail rollback                     # undo the last change
+handrail status                       # what is installed, and anything that would make it ineffective
+handrail doctor                       # checks, including tampering with installed files
+handrail disable --all                # remove everything; nothing of Handrail's is left behind
+```
+
+After a change, start a new `claude` session and run `/status`: the managed source appears
+under "Setting sources". `claude doctor` shows the same.
 
 ## Profiles
 
-| Profile | Modules |
+| Profile | Packs |
 |---|---|
-| `baseline` | `10-privacy` keep data on this machine · `20-anti-bypass` no bypassing · `60-audit` local audit log |
-| `strict` | baseline + `30-secrets` credentials · `40-destructive` confirm destructive commands · `70-retention` 7-day local transcripts |
-| `paranoid` | strict + `50-supply-chain` run only your own hooks · `80-sandbox` OS-level sandbox |
-
-Each module's `module.json` lists what it protects, its tradeoffs, and its limits.
+| `baseline` | `privacy` keep data on this machine · `anti-bypass` no bypassing · `audit` local audit log |
+| `strict` | baseline + `secrets` credentials · `destructive` confirm destructive commands · `retention` 7-day local transcripts |
+| `paranoid` | strict + `supply-chain` run only your own hooks · `sandbox` OS-level sandbox |
 
 ## How it works
 
-Handrail writes to Claude Code's **managed policy directory**
-(`/Library/Application Support/ClaudeCode/` on macOS, `/etc/claude-code/` on Linux):
+**Two tiers.** The agent runs as you, so anything you can change without administrator
+rights, it can change too.
 
-- one file per module in `managed-settings.d/` — managed settings take precedence over user,
-  project and command-line settings;
-- a marked block in the managed `CLAUDE.md` — loaded in every session, cannot be excluded;
-- hooks under `handrail/hooks/`.
+| | enforced | advisory |
+|---|---|---|
+| Where | Claude Code's managed policy directory (`/Library/Application Support/ClaudeCode/`, `/etc/claude-code/`): one `managed-settings.d/` fragment per pack, hooks, a marked block in `CLAUDE.md` | `~/.claude/rules/handrail-<pack>.md` |
+| Owner | root — the agent cannot change or disable it | you |
+| Changing it | asks for your password | no password |
 
-The directory is owned by root, so an agent running as you cannot change or disable any of it.
-Handrail never modifies files it did not create.
+**Changes are transactional.** Every change is planned first (`--dry-run` shows it), then
+checked, validated, staged, backed up and journaled before any file is replaced. If the
+process dies halfway, the next run restores the previous state exactly.
+
+**The privileged step trusts nothing it is handed.** Only *which packs you want* is passed to
+`sudo`. The privileged process recomputes the plan from the catalog compiled into the binary
+and refuses unless it matches the plan you reviewed.
+
+**Nothing it did not create is modified.** Other files in the managed directory are left
+alone, and removing Handrail's block from `CLAUDE.md` restores the original bytes.
 
 ## Limits
 
@@ -61,13 +85,12 @@ Handrail never modifies files it did not create.
 - A local administrator can edit the managed directory. Protecting against the administrator
   requires MDM.
 - If an MDM or server-managed Claude Code policy exists, Claude Code ignores file-based
-  policy by default. `install.sh --status` warns you when that is the case.
+  policy by default. `handrail status` warns you when that is the case.
 
-## Tests
+## Contributing
 
-```sh
-sh tests/run.sh    # runs in a temporary directory; no root, touches nothing on the system
-```
+Packs live in [`catalog/`](catalog/): `pack.toml`, `rules.md`, per-agent settings and hooks,
+and hook test vectors. `cargo test` validates every pack and runs its vectors.
 
 ## License
 
