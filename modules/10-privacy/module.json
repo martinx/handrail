@@ -1,0 +1,19 @@
+{
+  "id": "10-privacy",
+  "title": "Keep data on this machine",
+  "category": "privacy",
+  "level": "baseline",
+  "summary": "Turn off every optional upload: Remote Control, cloud agents, hosted artifacts, claude.ai connectors, telemetry, error reports, feedback and transcript uploads.",
+  "protects": [
+    "Sessions synced to the cloud",
+    "Output published to claude.ai",
+    "Feedback reports that attach the whole conversation and code",
+    "Telemetry and error reports"
+  ],
+  "tradeoffs": [
+    "No Remote Control from your phone",
+    "The Artifact tool and claude.ai connectors (Gmail, Drive, ...) are unavailable",
+    "/feedback, /bug and /share are unavailable"
+  ],
+  "cannot": "Model inference itself must send the conversation to the model API. No local setting can change that. See the README section 'Limits'."
+}

@@ -1,0 +1,17 @@
+{
+  "id": "40-destructive",
+  "title": "Confirm destructive commands",
+  "category": "destructive",
+  "level": "strict",
+  "summary": "Force-push, hard reset, recursive delete, git clean and similar irreversible commands always ask first. sudo is denied outright.",
+  "protects": [
+    "git push --force overwriting others' commits",
+    "git reset --hard / git clean discarding uncommitted work",
+    "Accidental rm -rf",
+    "Reusing a sudo credential you entered recently"
+  ],
+  "tradeoffs": [
+    "These commands stop and ask even in auto mode"
+  ],
+  "cannot": "Rules match command prefixes. Wrapping rm in a script, an alias or a different spelling gets around them. This is a speed bump, not isolation."
+}

@@ -1,0 +1,6 @@
+{
+  "allowManagedHooksOnly": true,
+  "env": {
+    "CLAUDE_CODE_DISABLE_OFFICIAL_MARKETPLACE_AUTOINSTALL": "1"
+  }
+}

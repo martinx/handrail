@@ -1,0 +1,17 @@
+{
+  "id": "80-sandbox",
+  "title": "OS-level sandbox",
+  "category": "sandbox",
+  "level": "paranoid",
+  "summary": "Enforced by the operating system (macOS Seatbelt, Linux bubblewrap): Bash and every child process cannot read credential directories and can only reach allowlisted domains.",
+  "protects": [
+    "Any process, including Python or Node scripts, reading ~/.ssh, ~/.aws and similar",
+    "Sending data to arbitrary domains"
+  ],
+  "tradeoffs": [
+    "Network commands can only reach allowlisted domains (package registries and GitHub by default); ssh to your own servers fails until you add them",
+    "If the sandbox cannot start, Claude Code refuses to run instead of silently falling back",
+    "A command that fails in the sandbox cannot be retried outside it"
+  ],
+  "cannot": "Commands you type yourself after the ! prefix are not sandboxed. Native Windows is not supported; use WSL2."
+}

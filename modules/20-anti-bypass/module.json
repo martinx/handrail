@@ -1,0 +1,15 @@
+{
+  "id": "20-anti-bypass",
+  "title": "No bypassing",
+  "category": "integrity",
+  "level": "baseline",
+  "summary": "Lock out 'skip all permission prompts' mode and stop a personal setting from switching off every hook. Without this, the other modules can be bypassed in one step.",
+  "protects": [
+    "Bypassing every prompt with --dangerously-skip-permissions",
+    "Disabling managed hooks with disableAllHooks in personal settings"
+  ],
+  "tradeoffs": [
+    "bypassPermissions mode is unavailable (auto mode is not affected)"
+  ],
+  "cannot": "A local administrator can still edit the managed directory. Protecting against the administrator requires MDM."
+}

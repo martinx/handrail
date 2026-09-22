@@ -1,0 +1,15 @@
+{
+  "id": "60-audit",
+  "title": "Local audit log",
+  "category": "audit",
+  "level": "baseline",
+  "summary": "Every tool call leaves one line on this machine: when, which session, which directory, what was called. Written locally, never sent anywhere.",
+  "protects": [
+    "Answering 'what exactly did it do?' after the fact",
+    "Spotting unexpected network access or deletions"
+  ],
+  "tradeoffs": [
+    "The log can contain sensitive command-line arguments (common password patterns are masked); files are mode 600"
+  ],
+  "cannot": "The log is written as you, so any process running as you can edit it. It protects against mistakes, not deliberate tampering."
+}

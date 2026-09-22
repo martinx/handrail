@@ -1,0 +1,15 @@
+{
+  "id": "70-retention",
+  "title": "Keep local transcripts 7 days",
+  "category": "retention",
+  "level": "strict",
+  "summary": "Session transcripts are stored in plaintext under ~/.claude/projects/ for 30 days by default. Reduce that to 7 days.",
+  "protects": [
+    "Passwords and customer data that appeared in a conversation lingering on disk",
+    "Exposure if the machine is lost or someone else logs in"
+  ],
+  "tradeoffs": [
+    "Sessions older than 7 days can no longer be resumed"
+  ],
+  "cannot": "Does not delete copies already taken by backups or cloud sync. Also enable full-disk encryption and exclude ~/.claude from cloud sync."
+}

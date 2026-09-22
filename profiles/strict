@@ -1,0 +1,7 @@
+# Strict: baseline plus credential protection, confirmation for destructive commands, shorter local retention.
+10-privacy
+20-anti-bypass
+30-secrets
+40-destructive
+60-audit
+70-retention

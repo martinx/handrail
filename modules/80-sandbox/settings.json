@@ -1,0 +1,23 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "filesystem": {
+      "denyRead": [
+        "~/.ssh", "~/.aws", "~/.gnupg", "~/.kube", "~/.config/gcloud", "~/.azure",
+        "~/.docker/config.json", "~/.netrc", "~/.npmrc", "~/.pypirc", "~/Library/Keychains",
+        "~/**/.env"
+      ]
+    },
+    "network": {
+      "allowedDomains": [
+        "registry.npmjs.org", "registry.yarnpkg.com",
+        "pypi.org", "files.pythonhosted.org",
+        "crates.io", "index.crates.io", "static.crates.io",
+        "proxy.golang.org", "sum.golang.org",
+        "github.com", "api.github.com", "codeload.github.com", "objects.githubusercontent.com", "raw.githubusercontent.com"
+      ]
+    }
+  }
+}

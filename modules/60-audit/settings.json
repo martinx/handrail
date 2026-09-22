@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [{ "type": "command", "command": "\"@HANDRAIL_HOOKS@/60-audit-log.sh\"" }]
+      }
+    ]
+  }
+}

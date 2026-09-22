@@ -1,0 +1,13 @@
+# name	expected exit	input
+publish Artifact	2	{"tool_name":"Artifact","tool_input":{"file_path":"/x.html"}}
+Artifact comments	2	{"tool_name":"ArtifactComments","tool_input":{}}
+claude.ai connector	2	{"tool_name":"mcp__claude_ai_Gmail__authenticate","tool_input":{}}
+scheduled cloud task	2	{"tool_name":"RemoteTrigger","tool_input":{}}
+send feedback	2	{"tool_name":"SendFeedback","tool_input":{"title":"x"}}
+cloud subagent	2	{"tool_name":"Agent","tool_input":{"prompt":"x","isolation":"remote"}}
+cloud subagent (spaces in JSON)	2	{"tool_name": "Agent", "tool_input": {"isolation" : "remote"}}
+local subagent	0	{"tool_name":"Agent","tool_input":{"prompt":"x"}}
+worktree subagent	0	{"tool_name":"Agent","tool_input":{"prompt":"x","isolation":"worktree"}}
+plain Bash	0	{"tool_name":"Bash","tool_input":{"command":"ls"}}
+self-hosted MCP	0	{"tool_name":"mcp__mydb__query","tool_input":{}}
+empty input must not crash	0	
