@@ -8,7 +8,7 @@ name: release
 #      (install.sh and `handrail self-update` download from here)
 #   2. crates.io: `cargo install handrail` (trusted publishing, no stored token)
 #   3. Homebrew tap: `brew install martinx/tap/handrail` (formula regenerated from SHA256SUMS)
-#   4. Website: redeployed by pages.yml on the same tag (shows the new version)
+#   4. Website: deployed by pages.yml from main, where the version was bumped before tagging
 on:
   push:
     tags: ["v*"]

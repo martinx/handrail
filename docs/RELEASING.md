@@ -16,7 +16,7 @@ git push origin v0.1.2
 | GitHub Release — binaries for `aarch64/x86_64-apple-darwin`, `x86_64/aarch64-unknown-linux-musl`, `SHA256SUMS`, build-provenance attestations | `curl -fsSL https://handrail.bitey.ai/install.sh \| sh`, `handrail self-update` | `release.yml` → `build`, `github-release` |
 | crates.io | `cargo install handrail` | `release.yml` → `crates-io` (trusted publishing) |
 | Homebrew tap `martinx/homebrew-tap` | `brew install martinx/tap/handrail` | `release.yml` → `homebrew` (formula rendered from `SHA256SUMS`) |
-| Website `handrail.bitey.ai` (version shown, pack catalog) | — | `pages.yml`, triggered by the same tag |
+| Website `handrail.bitey.ai` (version shown, pack catalog) | — | `pages.yml` on the push to `main` that bumps the version. The `github-pages` environment only accepts deployments from `main`; keep it that way |
 
 `release.yml` refuses a tag that differs from the `version` in `Cargo.toml`.
 

@@ -3,9 +3,11 @@ name: pages
 # The website is built from site/src and the catalog compiled into the binary, so the
 # pack list on the site always matches what handrail installs.
 on:
+  # main only: the github-pages environment accepts deployments from the default branch,
+  # and that restriction is worth keeping. A release needs no deploy of its own — the version
+  # is bumped on main before tagging, so the site already shows it.
   push:
     branches: [main]
-    tags: ["v*"]            # a release changes the version shown on the site
     paths: ["site/**", "catalog/**", "src/**", "Cargo.toml", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
