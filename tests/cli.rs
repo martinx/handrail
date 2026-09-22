@@ -186,12 +186,12 @@ fn doctor_detects_tampering() {
     .unwrap();
     let s = out(&e.run(&["doctor"]));
     assert!(
-        s.contains("differs from what Handrail wrote") && s.contains("handrail-privacy.json"),
+        s.contains("differ from what Handrail wrote") && s.contains("handrail-privacy.json"),
         "{s}"
     );
     // re-applying repairs it
     e.ok(&["use", "baseline", "--yes"]);
-    assert!(!out(&e.run(&["doctor"])).contains("differs from what Handrail wrote"));
+    assert!(!out(&e.run(&["doctor"])).contains("differ from what Handrail wrote"));
 }
 
 #[test]
@@ -697,4 +697,83 @@ fn rules_from_older_state_get_ids_without_changing_the_installed_files() {
         .unwrap_or_default()
         .contains("Reply in English"));
     let _ = before;
+}
+
+/// Rewrites the enforced state as if another Handrail version had written it.
+fn edit_state(e: &Env, f: impl FnOnce(&mut serde_json::Value)) {
+    let path = e.root().join("handrail/state.json");
+    let mut state: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    f(&mut state);
+    fs::write(&path, serde_json::to_vec_pretty(&state).unwrap()).unwrap();
+}
+
+#[test]
+fn upgrading_handrail_or_a_pack_without_file_changes_asks_for_nothing() {
+    let e = Env::new();
+    e.ok(&["use", "baseline", "--yes"]);
+    edit_state(&e, |s| {
+        s["handrail_version"] = "0.0.1".into();
+        s["packs"][0]["version"] = "0.9.0".into();
+    });
+    let status = e.ok(&["status"]);
+    assert!(
+        !status.contains("Re-apply") && !status.contains("re-apply"),
+        "{status}"
+    );
+    assert_eq!(e.ok(&["statusline"]).trim(), "handrail: baseline ✓");
+}
+
+#[test]
+fn a_newer_pack_version_is_named_in_status_and_the_status_line() {
+    let e = Env::new();
+    e.ok(&["use", "baseline", "--yes"]);
+    edit_state(&e, |s| {
+        s["handrail_version"] = "0.0.1".into();
+        for p in s["packs"].as_array_mut().unwrap() {
+            if p["id"] == "privacy" {
+                p["version"] = "0.9.0".into();
+            }
+        }
+    });
+    // What version 0.9.0 of the pack installed
+    fs::write(
+        e.root().join("managed-settings.d/handrail-privacy.json"),
+        "{}",
+    )
+    .unwrap();
+    let status = e.ok(&["status"]);
+    assert!(
+        status.contains("Pack updates available: privacy 0.9.0 → 1.0.0"),
+        "{status}"
+    );
+    assert!(e.ok(&["statusline"]).contains("re-apply"));
+}
+
+#[test]
+fn a_version_in_the_old_block_title_is_not_a_reason_to_re_apply() {
+    let e = Env::new();
+    e.ok(&["use", "baseline", "--yes"]);
+    let path = e.root().join("CLAUDE.md");
+    let md = fs::read_to_string(&path).unwrap();
+    fs::write(
+        &path,
+        md.replace(
+            "# Local policy (Handrail)",
+            "# Local policy (Handrail 0.2.0)",
+        ),
+    )
+    .unwrap();
+    edit_state(&e, |s| s["handrail_version"] = "0.2.0".into());
+    assert_eq!(e.ok(&["statusline"]).trim(), "handrail: baseline ✓");
+    // Real edits to the block are still caught
+    fs::write(
+        &path,
+        md.replace("Put nothing on claude.ai", "Anything goes"),
+    )
+    .unwrap();
+    assert!(e.ok(&["statusline"]).contains("drift ⚠"));
+    assert!(e
+        .ok(&["status"])
+        .contains("differ from what Handrail wrote"));
 }

@@ -14,6 +14,31 @@ pub struct Ctx {
     pub catalogs: Vec<ExternalCatalog>,
 }
 
+/// Result of [`Ctx::compare`].
+#[derive(Default)]
+pub struct Comparison {
+    /// Installed packs whose version in this binary's catalog differs: (id, installed, now).
+    pub updated: Vec<(String, String, String)>,
+    /// Files re-applying would change: (tier, path).
+    pub changed: Vec<(&'static str, String)>,
+    /// Re-planning failed (for example a pack no longer in the catalog).
+    pub error: Option<String>,
+}
+
+impl Comparison {
+    /// Files differ although no installed pack has a newer version: edited or deleted by
+    /// something else. Differences a newer Handrail makes without changing the policy are
+    /// excluded upstream (see `claude::equivalent`), so a Handrail upgrade alone is not
+    /// drift, and a changed Handrail version cannot hide an edit.
+    pub fn drift(&self) -> bool {
+        !self.changed.is_empty() && self.updated.is_empty()
+    }
+    /// Re-applying would install newer versions of installed packs.
+    pub fn outdated(&self) -> bool {
+        !self.changed.is_empty() && !self.updated.is_empty()
+    }
+}
+
 /// One --catalog source: what the user typed, and the local directory holding it.
 pub struct ExternalCatalog {
     pub label: String,
@@ -117,6 +142,55 @@ impl Ctx {
             i.packs.extend(s.packs.into_iter().map(|p| p.id));
         }
         i
+    }
+
+    /// How what is installed compares with what this binary would install now.
+    pub fn compare(&self) -> Comparison {
+        let intent = self.current_intent();
+        let mut c = Comparison::default();
+        if intent.packs.is_empty() && intent.local_rules.is_empty() {
+            return c;
+        }
+        for s in [self.enforced_state(), self.advisory_state()]
+            .into_iter()
+            .flatten()
+        {
+            for p in s.packs {
+                if let Some(now) = self.catalog.packs.get(&p.id) {
+                    if now.manifest.version != p.version {
+                        c.updated
+                            .push((p.id, p.version, now.manifest.version.clone()));
+                    }
+                }
+            }
+        }
+        match crate::claude::plan(&self.catalog, &self.target, &intent, crate::change::VERSION) {
+            Ok(p) => {
+                for (tier, root, pl) in [
+                    ("enforced", &self.target.managed_root, &p.enforced),
+                    ("advisory", &self.target.user_dir, &p.advisory),
+                ] {
+                    for o in &pl.ops {
+                        if let crate::core::plan::Op::Write { path, content, .. } = o {
+                            let installed = std::fs::read(root.join(path)).unwrap_or_default();
+                            if crate::claude::equivalent(path, &installed, content) {
+                                continue;
+                            }
+                        }
+                        // The state file records the Handrail version, so it always differs
+                        // after an upgrade; it says nothing about the policy itself
+                        if matches!(o, crate::core::plan::Op::RemoveDirIfEmpty { .. })
+                            || o.path() == crate::claude::STATE
+                        {
+                            continue;
+                        }
+                        c.changed.push((tier, o.path().to_string()));
+                    }
+                }
+            }
+            Err(e) => c.error = Some(e.to_string()),
+        }
+        c
     }
 
     pub fn is_installed(&self, id: &str) -> bool {

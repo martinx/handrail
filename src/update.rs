@@ -253,19 +253,12 @@ pub fn statusline(ctx: &Ctx) -> String {
         })
         .map(|p| p.name.clone())
         .unwrap_or_else(|| format!("{} packs", intent.packs.len()));
-    // Same drift check as doctor: re-plan what is installed; anything to do means the
-    // files on disk are not what Handrail wrote
-    let drift = crate::claude::plan(&ctx.catalog, &ctx.target, &intent, crate::change::VERSION)
-        .map(|p| {
-            [&p.enforced, &p.advisory].iter().any(|pl| {
-                pl.ops
-                    .iter()
-                    .any(|o| !matches!(o, crate::core::plan::Op::RemoveDirIfEmpty { .. }))
-            })
-        })
-        .unwrap_or(true);
-    if drift {
+    // Same comparison as status and doctor
+    let c = ctx.compare();
+    if c.drift() || c.error.is_some() {
         format!("handrail: {label} drift ⚠{hint}")
+    } else if c.outdated() {
+        format!("handrail: {label} ✓ re-apply{hint}")
     } else {
         format!("handrail: {label} ✓{hint}")
     }

@@ -1,6 +1,6 @@
 //! Read-only commands: list, show, profiles, status, doctor.
 
-use crate::claude::{other_sources, plan, Finding, TARGET};
+use crate::claude::{other_sources, Finding, TARGET};
 use crate::context::{can_write, Ctx};
 use crate::core::apply::JOURNAL;
 use crate::core::catalog::{Enforcement, Origin, Pack, Tier};
@@ -242,33 +242,32 @@ fn findings(ctx: &Ctx) -> Vec<String> {
             ));
         }
     }
-    // Installed by another version: re-planning would differ for that reason alone
-    let installed_by = ctx
-        .enforced_state()
-        .map(|s| s.handrail_version)
-        .filter(|v| v != crate::change::VERSION);
-    if let Some(v) = installed_by {
-        out.push(format!("Installed with Handrail {v}; this is {}. Re-apply to update: handrail use <profile> or handrail enable <pack>", crate::change::VERSION));
-        return out;
+    let c = ctx.compare();
+    let files = |c: &crate::context::Comparison| {
+        c.changed
+            .iter()
+            .map(|(t, p)| format!("{t}: {p}"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    if c.outdated() {
+        let list: Vec<String> = c
+            .updated
+            .iter()
+            .map(|(id, old, new)| format!("{id} {old} → {new}"))
+            .collect();
+        out.push(format!(
+            "Pack updates available: {}. Apply them with: handrail use <profile> (or handrail enable <pack>)",
+            list.join(", ")
+        ));
+    } else if c.drift() {
+        out.push(format!(
+            "Installed files differ from what Handrail wrote ({}): edited or deleted by something else. Re-apply to restore: handrail enable <pack> (or handrail doctor for details)",
+            files(&c)
+        ));
     }
-    // Drift: re-plan what is installed. Anything to do means the files on disk are not
-    // what Handrail wrote — edited, deleted, or tampered with.
-    let intent = ctx.current_intent();
-    if let Ok(p) = plan(&ctx.catalog, &ctx.target, &intent, crate::change::VERSION) {
-        for (name, pl) in [("enforced", &p.enforced), ("advisory", &p.advisory)] {
-            let changed: Vec<&str> = pl
-                .ops
-                .iter()
-                .filter(|o| !matches!(o, crate::core::plan::Op::RemoveDirIfEmpty { .. }))
-                .map(|o| o.path())
-                .collect();
-            if !changed.is_empty() && (!intent.packs.is_empty() || !intent.local_rules.is_empty()) {
-                out.push(format!(
-                    "The {name} tier differs from what Handrail wrote ({}). Re-apply with: handrail enable <pack> (or handrail doctor for details)",
-                    changed.join(", ")
-                ));
-            }
-        }
+    if let Some(e) = c.error {
+        out.push(format!("Cannot compare with what is installed: {e}"));
     }
     out
 }
