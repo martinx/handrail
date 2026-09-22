@@ -111,8 +111,11 @@ alone, and removing Handrail's block from `CLAUDE.md` restores the original byte
 
 ## Contributing
 
-Releasing: [docs/RELEASING.md](docs/RELEASING.md). Packs live in [`catalog/`](catalog/): `pack.toml`, `rules.md`, per-agent settings and hooks,
-and hook test vectors. `cargo test` validates every pack and runs its vectors.
+**Packs** are written and reviewed in [martinx/handrail-packs](https://github.com/martinx/handrail-packs)
+— contribute there, and validate with `handrail check .`. This repository's `catalog/` is a
+snapshot of it, synced by a daily workflow that opens a pull request.
+
+Releasing: [docs/RELEASING.md](docs/RELEASING.md).
 
 ## License
 

@@ -1,0 +1,51 @@
+name: sync-packs
+
+# martinx/handrail-packs is the source of truth for packs. Each release embeds a snapshot
+# of it in catalog/. This job copies the latest packs over, runs the full test suite, and
+# opens a pull request when anything changed. Nothing reaches main without review.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: copy packs and profiles from martinx/handrail-packs
+        run: |
+          git clone --depth 1 https://github.com/martinx/handrail-packs.git "$RUNNER_TEMP/packs"
+          echo "SHA=$(git -C "$RUNNER_TEMP/packs" rev-parse --short HEAD)" >> "$GITHUB_ENV"
+          rm -rf catalog/packs catalog/profiles
+          cp -R "$RUNNER_TEMP/packs/packs" catalog/packs
+          cp -R "$RUNNER_TEMP/packs/profiles" catalog/profiles
+      - name: anything to do?
+        id: diff
+        run: |
+          if git status --porcelain -- catalog | grep -q .; then echo "changed=true" >> "$GITHUB_OUTPUT"; else echo "catalog already matches handrail-packs@$SHA"; fi
+      - uses: dtolnay/rust-toolchain@stable
+        if: steps.diff.outputs.changed == 'true'
+      # Pull requests opened with GITHUB_TOKEN do not trigger CI, so the tests run here
+      - run: cargo test --locked
+        if: steps.diff.outputs.changed == 'true'
+      - name: open a pull request
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch="sync-packs"
+          git config user.name "handrail sync"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add catalog
+          git commit -m "Sync catalog from handrail-packs@$SHA"
+          git push -f origin "$branch"
+          gh pr view "$branch" >/dev/null 2>&1 && { echo "updated the open pull request"; exit 0; }
+          gh pr create --head "$branch" --base main \
+            --title "Sync catalog from handrail-packs@$SHA" \
+            --body "Copies packs/ and profiles/ from https://github.com/martinx/handrail-packs/commit/$SHA into catalog/. The full test suite passed in the sync job. The next release embeds these packs."

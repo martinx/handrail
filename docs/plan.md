@@ -47,7 +47,10 @@ and Linux x64 pass CI.
 
 ## M2 — Distribution, remote registry, UI
 
-**Done ahead of the rest of M2 (2026-09-22):** website (landing page + docs, generated from the
+**Done (2026-09-22):** releases to GitHub, crates.io and Homebrew from one tag (0.1.0–0.1.2);
+`martinx/handrail-packs` as the source of truth for packs, validated by `handrail check` in its CI
+and synced into `catalog/` by a daily pull request; `self-update` with an opt-in daily check;
+`statusline`. **Also done earlier:** website (landing page + docs, generated from the
 catalog), `install.sh` (checksum-verified, sudo only for the final copy), release workflow
 (4 targets, SHA256SUMS, build-provenance attestations), Pages workflow. Waiting on: a public
 repository, GitHub Pages with the `handrail.bitey.ai` custom domain, and the first `v0.1.0` tag.
