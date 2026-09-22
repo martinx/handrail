@@ -90,7 +90,16 @@ def main():
         shutil.rmtree(DIST)
     DIST.mkdir(parents=True)
 
-    index = (SRC / "index.html").read_text()
+    header = (SRC / "_header.html").read_text()
+    footer = (SRC / "_footer.html").read_text()
+
+    def chrome(html_text, page):
+        """One header and footer for every page, so navigation can never drift apart.
+        The current page's link is marked for screen readers and styling."""
+        h = header.replace(f'data-page="{page}"', f'data-page="{page}" aria-current="page"')
+        return html_text.replace("{{HEADER}}", h).replace("{{FOOTER}}", footer)
+
+    index = chrome((SRC / "index.html").read_text(), "home")
     for key, value in {
         "{{VERSION}}": e(catalog["version"]),
         "{{PACK_COUNT}}": str(len(packs)),
@@ -107,7 +116,11 @@ def main():
         sys.exit("unreplaced placeholder in index.html")
     (DIST / "index.html").write_text(index)
 
-    for name in ("docs.html", "style.css", "install.sh"):
+    docs = chrome((SRC / "docs.html").read_text(), "docs")
+    if "{{" in docs:
+        sys.exit("unreplaced placeholder in docs.html")
+    (DIST / "docs.html").write_text(docs)
+    for name in ("style.css", "install.sh"):
         shutil.copy2(SRC / name, DIST / name)
     (DIST / "CNAME").write_text(DOMAIN + "\n")
     # GitHub Pages: serve files as-is (no Jekyll processing)

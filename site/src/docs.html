@@ -11,19 +11,7 @@
 <script>try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 </head>
 <body>
-<header class="nav">
-  <div class="wrap">
-    <a class="brand" href="./"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 8h18M6 8v12M18 8v12" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>Handrail</a>
-    <nav class="nav-links">
-      <a class="opt" href="./#packs">Packs</a>
-      <a href="docs.html">Docs</a>
-      <a href="https://github.com/martinx/handrail">GitHub</a>
-      <button class="theme-btn" type="button" aria-label="Toggle light and dark theme" data-theme-toggle>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-      </button>
-    </nav>
-  </div>
-</header>
+{{HEADER}}
 
 <div class="wrap docs">
 <aside class="toc">
@@ -208,14 +196,7 @@ sudo rm /usr/local/bin/handrail        <span class="c"># remove the binary</span
 </article>
 </div>
 
-<footer class="footer">
-  <div class="wrap">
-    <a class="brand" href="./"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 8h18M6 8v12M18 8v12" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>Handrail</a>
-    <a href="https://github.com/martinx/handrail">GitHub</a>
-    <a href="https://github.com/martinx/handrail/blob/main/LICENSE">Apache-2.0</a>
-    <span class="fine">Handrail is an unofficial project and is not affiliated with, or endorsed by, Anthropic or any other agent vendor.</span>
-  </div>
-</footer>
+{{FOOTER}}
 <script>
 (function () {
   var t = document.querySelector("[data-theme-toggle]");

@@ -343,3 +343,6 @@ h3 { font-size: 18px; letter-spacing: -0.01em; margin: 0 0 8px; }
 }
 /* Inline commands in running text never split across lines */
 .then code, .section-lede code, .feature p code { white-space: nowrap; }
+
+/* The page you are on */
+.nav-links a[aria-current="page"] { color: var(--text); font-weight: 600; }
