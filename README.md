@@ -53,6 +53,7 @@ in `handrail statusline`; it is off by default and never installs anything by it
 
 ```sh
 handrail list                         # packs by category, with how strongly Claude Code enforces each
+handrail profiles                     # named sets of packs, and what switching would change
 handrail show secrets                 # what a pack protects, its tradeoffs and its limits
 handrail use baseline --dry-run       # the exact files a change would write; writes nothing
 handrail use baseline                 # apply (asks for confirmation, then your password once)
@@ -95,6 +96,7 @@ process dies halfway, the next run restores the previous state exactly.
 
 **The privileged step trusts nothing it is handed.** Only *which packs you want* is passed to
 `sudo`. The privileged process recomputes the plan from the catalog compiled into the binary
+(plus root-owned copies of any external packs, and the `--catalog` directories you reviewed)
 and refuses unless it matches the plan you reviewed.
 
 **Nothing it did not create is modified.** Other files in the managed directory are left
@@ -109,10 +111,26 @@ alone, and removing Handrail's block from `CLAUDE.md` restores the original byte
 - If an MDM or server-managed Claude Code policy exists, Claude Code ignores file-based
   policy by default. `handrail status` warns you when that is the case.
 
+## Your own packs
+
+A pack is a directory of plain files ([complete example](https://handrail.bitey.ai/#extend-write)).
+Try it, share it, publish it:
+
+```sh
+handrail check ./my-packs                                  # format, hook tests, script lint
+handrail enable my-pack --catalog ./my-packs               # install from a directory
+handrail enable my-pack --catalog github.com/you/my-packs  # …or from any git repository
+handrail publish my-pack --catalog ./my-packs              # propose it to handrail-packs as a pull request
+```
+
+`publish` uses the GitHub CLI when signed in, or `GITHUB_TOKEN`; it forks, commits and opens
+the pull request through the GitHub API, so no git or manual fork is needed. `--repo` targets
+a team catalog instead. Details: [Share and publish](https://handrail.bitey.ai/docs.html#share).
+
 ## Contributing
 
 **Packs** are written and reviewed in [martinx/handrail-packs](https://github.com/martinx/handrail-packs)
-— contribute there, and validate with `handrail check .`. This repository's `catalog/` is a
+— contribute there (or with `handrail publish`), and validate with `handrail check .`. This repository's `catalog/` is a
 snapshot of it, synced by a daily workflow that opens a pull request.
 
 Releasing: [docs/RELEASING.md](docs/RELEASING.md).

@@ -56,21 +56,39 @@ pub fn list(ctx: &Ctx, category: Option<&str>) {
         }
         println!();
     }
-    if category.is_none() {
-        // Profiles are named sets of the packs above; `handrail use <profile>` installs one
-        println!("Profiles (sets of the packs above). * = exactly what is installed\n");
-        for p in ctx.catalog.profiles.values() {
-            let set: std::collections::BTreeSet<String> = p.packs.iter().cloned().collect();
-            let mark = if !installed.is_empty() && set == installed {
-                "*"
-            } else {
-                " "
-            };
-            println!("  {mark} {:<14} {}", p.name, p.packs.join(" "));
-        }
-        println!();
+    if category.is_none() && !ctx.catalog.profiles.is_empty() {
+        // Profiles are a separate concept (named sets of these packs): one line here,
+        // the details in `handrail profiles`
+        let names: Vec<String> = by_size(ctx)
+            .into_iter()
+            .map(|p| {
+                if matches_installed(&p.packs, &installed) {
+                    format!("{} (in use)", p.name)
+                } else {
+                    p.name.clone()
+                }
+            })
+            .collect();
+        println!(
+            "Profiles: {}  — sets of these packs; see: handrail profiles\n",
+            names.join(", ")
+        );
     }
-    println!("Details: handrail show <pack>    Profiles: handrail profiles    Apply: handrail use <profile>");
+    println!("Details: handrail show <pack>");
+}
+
+/// Profiles from the smallest to the largest, which reads as mildest to strictest.
+fn by_size(ctx: &Ctx) -> Vec<&crate::core::catalog::Profile> {
+    let mut v: Vec<_> = ctx.catalog.profiles.values().collect();
+    v.sort_by_key(|p| p.packs.len());
+    v
+}
+
+/// True when the installed packs are exactly this profile's packs.
+fn matches_installed(packs: &[String], installed: &std::collections::BTreeSet<String>) -> bool {
+    !installed.is_empty()
+        && packs.len() == installed.len()
+        && packs.iter().all(|p| installed.contains(p))
 }
 
 pub fn show(ctx: &Ctx, id: &str) -> Result<(), String> {
@@ -124,11 +142,38 @@ pub fn show(ctx: &Ctx, id: &str) -> Result<(), String> {
 }
 
 pub fn profiles(ctx: &Ctx) {
-    for p in ctx.catalog.profiles.values() {
-        println!("{}  — {}", p.name, p.description);
-        println!("    {}\n", p.packs.join(" "));
+    let installed = ctx.current_intent().packs;
+    println!("Profiles are named sets of packs. `handrail use <profile>` makes the installed packs exactly that set.\n");
+    for p in by_size(ctx) {
+        let mark = if matches_installed(&p.packs, &installed) {
+            "*"
+        } else {
+            " "
+        };
+        println!("{mark} {}  — {}", p.name, p.description);
+        println!("    {}", p.packs.join(" "));
+        if !installed.is_empty() && mark == " " {
+            let add: Vec<&str> = p
+                .packs
+                .iter()
+                .filter(|x| !installed.contains(*x))
+                .map(|x| x.as_str())
+                .collect();
+            let remove: Vec<&str> = installed
+                .iter()
+                .filter(|x| !p.packs.contains(x))
+                .map(|x| x.as_str())
+                .collect();
+            if !add.is_empty() {
+                println!("    switching adds: {}", add.join(" "));
+            }
+            if !remove.is_empty() {
+                println!("    switching removes: {}", remove.join(" "));
+            }
+        }
+        println!();
     }
-    println!("Apply one: handrail use <profile> --dry-run");
+    println!("* = exactly what is installed.  Apply one: handrail use <profile> --dry-run");
 }
 
 pub fn status(ctx: &Ctx) {

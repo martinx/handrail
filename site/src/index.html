@@ -175,28 +175,133 @@ Never publish anything to the internet.</pre>
 <section class="alt" id="extend">
   <div class="wrap">
     <div class="kicker">Extend</div>
-    <h2>Your rules, new packs, more agents.</h2>
-    <p class="section-lede">Security is the first category, not the last. The catalog is plain files, validated by tests.</p>
-    <div class="grid-3">
-      <div class="feature">
-        <h3>Add your own rules</h3>
-        <p>One command puts a rule into the root-owned instructions block, loaded in every session.</p>
-<pre class="snippet" style="margin-top:14px">handrail rule add "Reply in English"</pre>
-      </div>
-      <div class="feature">
-        <h3>Write a pack</h3>
-        <p>A directory with metadata, instructions, and optional settings and hooks. <code>cargo test</code> validates it and runs its hook tests.</p>
-<pre class="snippet" style="margin-top:14px">catalog/packs/my-pack/
-├─ pack.toml
-├─ rules.md
-└─ claude-code/settings.json</pre>
-      </div>
-      <div class="feature">
-        <h3>More agents</h3>
-        <p>Packs describe intent; each agent gets an adapter that maps it to the strongest mechanism that agent has — and labels it honestly when that's only a suggestion.</p>
-        <p style="margin-top:12px"><a href="docs.html#roadmap">Roadmap →</a></p>
-      </div>
-    </div>
+    <h2>Your rules, your packs, shared in one command.</h2>
+    <p class="section-lede">Security is the first category, not the last. A pack is a directory of plain files; the same checks that guard the built-in catalog run on yours.</p>
+
+    <ol class="guide">
+      <li class="guide-step" id="extend-rules">
+        <div class="guide-head">
+          <h3>Add a rule of your own</h3>
+          <p>The quickest extension: one sentence, placed in the root-owned instructions block that every session loads. Good for team conventions that don't need enforcement.</p>
+        </div>
+        <pre class="snippet"><span class="p">$</span> handrail rule add &quot;Reply in English. Keep commit messages under 72 characters.&quot;
+<span class="p">$</span> handrail rule list
+<span class="p">$</span> handrail rule remove 1</pre>
+      </li>
+
+      <li class="guide-step" id="extend-write">
+        <div class="guide-head">
+          <h3>Write a pack</h3>
+          <p>When a rule needs teeth, make it a pack. This complete example keeps agents away from production: a permission rule that asks before deploys, a hook that blocks commands aimed at production, instructions for the model, and tests for the hook.</p>
+        </div>
+<pre class="snippet tree">my-packs/
+└─ packs/no-prod/
+   ├─ <span class="k">pack.toml</span>                  <span class="c"># what it is, what it costs, what it can't do</span>
+   ├─ <span class="k">rules.md</span>                   <span class="c"># instructions loaded into every session</span>
+   ├─ claude-code/
+   │  ├─ <span class="k">settings.json</span>           <span class="c"># permissions and hooks, enforced by Claude Code</span>
+   │  └─ hooks/<span class="s">guard.sh</span>          <span class="c"># exit 2 blocks the tool call</span>
+   └─ tests/<span class="s">guard.cases</span>          <span class="c"># inputs the hook must block or allow</span></pre>
+        <div class="files">
+          <div class="file"><div class="file-name">packs/no-prod/pack.toml</div><pre class="snippet">id = "no-prod"
+version = "1.0.0"
+category = "team"
+tier = "enforced"
+title = "Keep agents away from production"
+summary = "Commands aimed at production hosts or a production environment are blocked; deploy scripts ask first."
+protects = [
+  "A migration or delete run against the production database",
+  "Deploying from a laptop by accident",
+]
+tradeoffs = [
+  "Legitimate production work has to happen outside the agent",
+]
+limits = "Matches command text. A script that reads the host from a config file gets past it."
+
+[targets.claude-code]
+enforcement = "partial"
+settings = "claude-code/settings.json"
+hooks = ["claude-code/hooks/guard.sh"]</pre></div>
+          <div class="file"><div class="file-name">packs/no-prod/rules.md</div><pre class="snippet">### Production (no-prod)
+
+- Never run commands against production hosts, databases or environments.
+- When a task needs production access, write the command out for the user to run.</pre></div>
+          <div class="file"><div class="file-name">packs/no-prod/claude-code/settings.json</div><pre class="snippet">{
+  "permissions": {
+    "ask": ["Bash(./deploy*)", "Bash(kubectl --context prod*)"]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [{ "type": "command", "command": "\"@PACK_DIR@/hooks/guard.sh\"" }]
+      }
+    ]
+  }
+}</pre></div>
+          <div class="file"><div class="file-name">packs/no-prod/claude-code/hooks/guard.sh</div><pre class="snippet">#!/bin/sh
+# Exit 2 blocks the call; stderr tells the model why.
+input=$(cat)
+if printf '%s' "$input" | grep -Eq 'prod\.internal|--env[= ]production|RAILS_ENV=production'; then
+  echo "Blocked by no-prod: this command targets production" &gt;&amp;2
+  exit 2
+fi
+exit 0</pre></div>
+          <div class="file"><div class="file-name">packs/no-prod/tests/guard.cases — tab-separated: name, expected exit code, hook input</div><pre class="snippet"># name	expected exit	input
+production host	2	{"tool_name":"Bash","tool_input":{"command":"psql -h db.prod.internal"}}
+production env	2	{"tool_name":"Bash","tool_input":{"command":"rails db:migrate RAILS_ENV=production"}}
+local database	0	{"tool_name":"Bash","tool_input":{"command":"psql -h localhost"}}</pre></div>
+        </div>
+        <p class="guide-note"><code>@PACK_DIR@</code> becomes the pack's installed hook directory. Hooks run as <code>/bin/sh</code> on every matching call, so keep them small: a broken managed hook blocks every session. The <a href="docs.html#packs">pack format reference</a> lists every field.</p>
+      </li>
+
+      <li class="guide-step" id="extend-test">
+        <div class="guide-head">
+          <h3>Check and try it locally</h3>
+          <p><code>handrail check</code> validates the format, runs every hook test and lints the scripts. <code>--catalog</code> puts your directory next to the built-in packs for any command, so you can review the exact files before anything is written.</p>
+        </div>
+        <pre class="snippet"><span class="p">$</span> handrail check ./my-packs
+<span class="p">$</span> handrail show no-prod --catalog ./my-packs
+<span class="p">$</span> handrail enable no-prod --catalog ./my-packs --dry-run
+<span class="p">$</span> handrail enable no-prod --catalog ./my-packs</pre>
+        <p class="guide-note">Handrail installs a copy of the pack, so it keeps working if you move or delete the directory; run <code>enable</code> again with <code>--catalog</code> to install a new version. An external pack can't take the id of a built-in pack or override its settings.</p>
+      </li>
+
+      <li class="guide-step" id="extend-share">
+        <div class="guide-head">
+          <h3>Share it with a link</h3>
+          <p>Push the directory to any git repository. Anyone who trusts it installs your pack straight from the repository; no review, no waiting. Private repositories work with your usual git credentials, which makes this the simplest way to roll a policy out to a team.</p>
+        </div>
+        <pre class="snippet"><span class="c"># you</span>
+<span class="p">$</span> git -C my-packs init &amp;&amp; git -C my-packs add . &amp;&amp; git -C my-packs commit -m &quot;no-prod&quot;
+<span class="p">$</span> git -C my-packs push git@github.com:you/my-packs.git main
+<span class="c"># your teammates</span>
+<span class="p">$</span> handrail enable no-prod --catalog github.com/you/my-packs</pre>
+      </li>
+
+      <li class="guide-step" id="extend-publish">
+        <div class="guide-head">
+          <h3>Publish it to the shared catalog</h3>
+          <p>Think others would want it? <code>handrail publish</code> proposes it to <a href="https://github.com/martinx/handrail-packs">handrail-packs</a> as a pull request. It runs the checks, forks the catalog into your account if needed, commits the pack on a branch and opens the pull request, all through the GitHub API. You don't need git or a manual fork.</p>
+        </div>
+        <pre class="snippet"><span class="p">$</span> handrail publish no-prod --catalog ./my-packs --dry-run
+<span class="p">$</span> handrail publish no-prod --catalog ./my-packs</pre>
+        <ul class="guide-list">
+          <li><strong>Access:</strong> uses the <a href="https://cli.github.com">GitHub CLI</a> if it's signed in, or a token in <code>GITHUB_TOKEN</code> (scope <code>public_repo</code>). With neither, it prints the manual steps.</li>
+          <li><strong>Review:</strong> packs can run as root on other people's machines, so a maintainer reviews every pull request. Once merged, the pack ships in the next Handrail release and anyone can install it by name.</li>
+          <li><strong>Updates:</strong> bump <code>version</code> and publish again; files you removed are removed in the pull request too.</li>
+          <li><strong>Your own catalog:</strong> <code>--repo your-org/policy-packs</code> sends the pull request to a team repository instead.</li>
+        </ul>
+      </li>
+
+      <li class="guide-step" id="extend-agents">
+        <div class="guide-head">
+          <h3>Bring another agent</h3>
+          <p>Packs describe intent. Each agent gets an adapter that maps that intent to the strongest mechanism the agent offers, and labels it honestly when the result is only a suggestion. A pack adds support by adding a directory next to <code>claude-code/</code> and a <code>[targets.&lt;agent&gt;]</code> section.</p>
+        </div>
+        <p class="guide-note"><a href="docs.html#roadmap">See the roadmap →</a></p>
+      </li>
+    </ol>
   </div>
 </section>
 

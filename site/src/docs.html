@@ -28,6 +28,7 @@
   <div class="t">Extend</div>
   <a href="#rules">Your own rules</a>
   <a href="#packs">Writing a pack</a>
+  <a href="#share">Share and publish</a>
   <a href="#roadmap">Roadmap</a>
   <div class="t">More</div>
   <a href="#uninstall">Uninstall</a>
@@ -98,8 +99,11 @@ handrail use baseline               <span class="c"># apply: confirm, then your 
 <tr><td><code>status</code></td><td>What is installed, and anything that would make it ineffective.</td></tr>
 <tr><td><code>statusline</code></td><td>One line for Claude Code's status line: the matching profile or pack count, and <code>drift</code> when installed files differ from what Handrail wrote. Local reads only.</td></tr>
 <tr><td><code>self-update [--check] [--auto on|off]</code></td><td>Update Handrail itself to the latest release; <code>--auto on</code> enables a daily check shown in the status line (nothing is installed automatically).</td></tr>
+<tr><td><code>check [dir]</code></td><td>Validate a catalog directory: pack format, hook test vectors, script lint. For pack authors and CI.</td></tr>
+<tr><td><code>publish &lt;pack&gt; --catalog &lt;dir&gt;</code></td><td>Propose your pack to the shared catalog as a pull request. <code>--repo owner/name</code> targets another catalog repository. See <a href="#share">Share and publish</a>.</td></tr>
 <tr><td><code>doctor</code></td><td>Checks: Claude Code present, binary not user-writable, no overriding policy sources, no interrupted runs, no tampering.</td></tr>
 </table>
+<p>Every command also accepts <code>--catalog &lt;dir|repo&gt;</code> (repeatable), which adds the packs in a directory or git repository to the built-in ones. See <a href="#share">Share and publish</a>.</p>
 <p>Every command that changes something accepts <code>--dry-run</code> (show the plan, write nothing) and <code>--yes</code> (skip the confirmation prompt; the password prompt remains).</p>
 
 <h2 id="tiers">Two tiers</h2>
@@ -168,8 +172,8 @@ handrail rule remove 1</pre>
 <p>Rules land in the root-owned instructions block, loaded in every session. They are instructions to the model, not enforcement.</p>
 
 <h2 id="packs">Writing a pack</h2>
-<p>Packs are written and reviewed in <a href="https://github.com/martinx/handrail-packs">martinx/handrail-packs</a> (see its <a href="https://github.com/martinx/handrail-packs/blob/main/CONTRIBUTING.md">contributing guide</a>). Each pack is a directory:</p>
-<pre class="snippet">catalog/packs/my-pack/
+<p>Write a pack in any directory; a catalog is just a folder with <code>packs/</code> in it (and optionally <code>profiles/</code>). The <a href="index.html#extend-write">complete example on the home page</a> is a working pack you can copy. Each pack is a directory:</p>
+<pre class="snippet">my-packs/packs/my-pack/
 ├─ pack.toml                   <span class="c"># metadata, tier, per-agent spec</span>
 ├─ rules.md                    <span class="c"># instructions for the agent (English)</span>
 ├─ claude-code/
@@ -194,6 +198,27 @@ handrail rule remove 1</pre>
 <p>In <code>settings.json</code>, <code>@PACK_DIR@</code> is replaced with the directory the pack is installed to, so a hook is referenced as <code>"\"@PACK_DIR@/hooks/guard.sh\""</code>. Test vectors are tab-separated lines: name, expected exit code, JSON input.</p>
 <p><code>handrail check .</code> validates every pack, locally and in that repository's CI: required fields, unknown fields and placeholders, settings that are valid JSON objects, scalar keys that clash with another pack, and each hook's test vectors. Only claim <code>enforced</code> for what the agent actually enforces, and keep <code>limits</code> honest — a pack that claims more than it enforces is a bug.</p>
 
+<h2 id="share">Share and publish</h2>
+<p>Try a pack from your directory with <code>--catalog</code>; nothing is written until you confirm the plan:</p>
+<pre class="snippet">handrail check ./my-packs
+handrail enable my-pack --catalog ./my-packs --dry-run
+handrail enable my-pack --catalog ./my-packs</pre>
+<p>Handrail installs a copy of an external pack next to the files it writes (in the root-owned directory for enforced packs), so <code>status</code>, <code>disable</code> and later changes keep working without the source, and the privileged step reads the root-owned copy. To install a new version, run <code>enable</code> with <code>--catalog</code> again. <code>list</code> and <code>show</code> say where an external pack came from. An external pack cannot reuse a built-in pack's id or set a setting a built-in pack already sets to a different value.</p>
+<h3>Share with a link</h3>
+<p>Push the directory to any git repository; others install from it directly, with no review step:</p>
+<pre class="snippet">handrail enable my-pack --catalog github.com/you/my-packs
+handrail enable my-pack --catalog git@github.com:your-org/policy-packs.git</pre>
+<p>Only install packs from people you trust: an enforced pack's hooks run on every matching tool call.</p>
+<h3>Publish to the shared catalog</h3>
+<pre class="snippet">handrail publish my-pack --catalog ./my-packs --dry-run
+handrail publish my-pack --catalog ./my-packs</pre>
+<p><code>publish</code> runs <code>handrail check</code>, then opens a pull request on <a href="https://github.com/martinx/handrail-packs">martinx/handrail-packs</a> through the GitHub API: it forks the repository into your account when you can't push to it, commits the pack on a branch <code>pack/&lt;id&gt;-&lt;version&gt;</code>, and opens the pull request. Publishing the same version again updates that pull request; files removed from the pack are removed in it too.</p>
+<ul>
+<li><strong>Access:</strong> the <a href="https://cli.github.com">GitHub CLI</a> when signed in (<code>gh auth login</code>), otherwise a token in <code>GITHUB_TOKEN</code> or <code>GH_TOKEN</code> with the <code>public_repo</code> scope. The token is passed to curl on stdin, never on the command line. With neither, the manual steps are printed.</li>
+<li><strong>Review:</strong> every pull request is reviewed by a maintainer (see the <a href="https://github.com/martinx/handrail-packs/blob/main/CONTRIBUTING.md">contributing guide</a>). Merged packs ship in the next Handrail release.</li>
+<li><strong>Team catalogs:</strong> <code>--repo your-org/policy-packs</code> sends the pull request to your own repository instead.</li>
+</ul>
+
 <h2 id="roadmap">Roadmap</h2>
 <table>
 <tr><th>Next</th><th>What</th></tr>
@@ -212,7 +237,9 @@ sudo rm /usr/local/bin/handrail        <span class="c"># remove the binary</span
 <h3>Is this made by Anthropic?</h3>
 <p>No. Handrail is an unofficial, independent project. It only uses configuration that Claude Code documents.</p>
 <h3>Does Handrail send anything anywhere?</h3>
-<p>No. It has no telemetry and no account. The installer downloads a release; the CLI works offline.</p>
+<p>No. It has no telemetry and no account. The CLI works offline and only goes online when you ask it to: <code>self-update</code>, <code>--catalog</code> with a repository, and <code>publish</code>. The opt-in daily update check reads the latest release number from GitHub.</p>
+<h3>Where do pack updates come from?</h3>
+<p>The built-in packs are compiled into the binary, so an install always has the packs of that release. Packs are maintained in <a href="https://github.com/martinx/handrail-packs">handrail-packs</a>; changes there are synced into Handrail daily and shipped with the next release. Get them with <code>handrail self-update</code> (or <code>brew upgrade handrail</code>), then run <code>handrail status</code>: installed packs older than the binary's are reported, and re-running <code>handrail use &lt;profile&gt;</code> or <code>enable</code> updates them.</p>
 <h3>Why does it need my password?</h3>
 <p>Because the point is that the agent — running as you — cannot change the policy. The same property means changing it needs administrator rights.</p>
 <h3>What if something goes wrong?</h3>

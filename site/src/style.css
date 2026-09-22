@@ -201,6 +201,37 @@ h3 { font-size: 18px; letter-spacing: -0.01em; margin: 0 0 8px; }
 .snippet .k { color: #f2b441; }
 .snippet .s { color: #9fd7b8; }
 
+/* extend guide: one step per row, samples full width */
+.guide { list-style: none; margin: 0; padding: 0; counter-reset: step; display: grid; gap: 22px; }
+.guide-step {
+  counter-increment: step; position: relative; min-width: 0;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 28px 28px 28px 84px;
+}
+.guide-step::before {
+  content: counter(step); position: absolute; left: 28px; top: 26px;
+  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 15px;
+}
+.guide-head { max-width: 72ch; margin-bottom: 18px; }
+.guide-head h3 { margin: 4px 0 8px; font-size: 20px; }
+.guide-head p { margin: 0; color: var(--muted); }
+.guide-step > .snippet, .guide-step .files { margin-top: 14px; }
+.guide-step .snippet .p { color: #6b7684; user-select: none; }
+.files { display: grid; gap: 14px; min-width: 0; }
+.file { min-width: 0; }
+.file-name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; color: var(--muted);
+  padding: 0 2px 6px;
+}
+.guide-note { color: var(--muted); font-size: 15px; margin: 16px 0 0; max-width: 80ch; }
+.guide-list { margin: 16px 0 0; padding-left: 20px; color: var(--muted); display: grid; gap: 8px; max-width: 80ch; }
+.guide-list strong { color: var(--text); font-weight: 600; }
+@media (max-width: 620px) {
+  .guide-step { padding: 20px 16px; }
+  .guide-step::before { position: static; margin-bottom: 12px; }
+}
+
 /* features */
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 @media (max-width: 960px) { .grid-3 { grid-template-columns: repeat(2, 1fr); } }
