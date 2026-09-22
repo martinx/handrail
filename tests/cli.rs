@@ -252,37 +252,60 @@ fn repo() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
-/// sh swallows the leading bytes of a multibyte character into a variable name:
-/// "$VERSION）" reads a variable named VERSION\xef\xbc and aborts under `set -u`.
-/// This stopped the M0 installer halfway once. Hooks are shell scripts, so check them.
+#[test]
+fn check_passes_on_the_shipped_catalog_and_fails_on_a_broken_pack() {
+    let e = Env::new();
+    let ok = e.run(&["check", repo().join("catalog").to_str().unwrap()]);
+    assert!(ok.status.success(), "{}{}", out(&ok), err(&ok));
+    assert!(out(&ok).contains("All checks passed"));
+    // a broken copy: invalid settings JSON and a hook that fails its own vector
+    let broken = e.tmp.path().join("broken");
+    fs::create_dir_all(broken.join("packs/x/claude-code/hooks")).unwrap();
+    fs::create_dir_all(broken.join("packs/x/tests")).unwrap();
+    fs::write(broken.join("packs/x/pack.toml"), "id = \"x\"\nversion = \"1.0.0\"\ncategory = \"security\"\ntier = \"enforced\"\ntitle = \"t\"\nsummary = \"s\"\nlimits = \"l\"\n[targets.claude-code]\nenforcement = \"enforced\"\nsettings = \"claude-code/settings.json\"\nhooks = [\"claude-code/hooks/g.sh\"]\n").unwrap();
+    fs::write(broken.join("packs/x/rules.md"), "### x\n").unwrap();
+    fs::write(
+        broken.join("packs/x/claude-code/settings.json"),
+        "{not json",
+    )
+    .unwrap();
+    fs::write(
+        broken.join("packs/x/claude-code/hooks/g.sh"),
+        "#!/bin/sh\nV=1\necho \"$V\u{ff09}\"\nexit 0\n",
+    )
+    .unwrap();
+    fs::write(
+        broken.join("packs/x/tests/g.cases"),
+        "should block\t2\t{}\n",
+    )
+    .unwrap();
+    let bad = e.run(&["check", broken.to_str().unwrap()]);
+    assert!(!bad.status.success());
+    let s = out(&bad);
+    assert!(
+        s.contains("invalid JSON") && s.contains("should block") && s.contains("use ${VAR}"),
+        "{s}"
+    );
+}
+
+/// Hooks are shell scripts: the same lint `handrail check` applies.
 #[test]
 fn hook_scripts_never_put_non_ascii_right_after_a_variable() {
-    let mut files = vec![];
-    files_under(&repo().join("catalog"), &mut files);
-    for f in files
-        .iter()
-        .filter(|f| f.extension().is_some_and(|e| e == "sh"))
-    {
-        let s = fs::read_to_string(f).unwrap();
-        for (n, line) in s.lines().enumerate() {
-            let b = line.as_bytes();
-            for i in 0..b.len() {
-                if b[i] != b'$' {
-                    continue;
-                }
-                let mut j = i + 1;
-                while j < b.len() && (b[j].is_ascii_alphanumeric() || b[j] == b'_') {
-                    j += 1;
-                }
-                assert!(
-                    !(j > i + 1 && j < b.len() && b[j] >= 0x80),
-                    "{}:{}: use ${{VAR}} before non-ASCII text",
-                    f.display(),
-                    n + 1
-                );
-            }
-        }
-    }
+    let problems = handrail_lint(&repo().join("catalog"));
+    assert!(problems.is_empty(), "{problems:#?}");
+}
+
+fn handrail_lint(dir: &Path) -> Vec<String> {
+    let o = Command::new(env!("CARGO_BIN_EXE_handrail"))
+        .arg("check")
+        .arg(dir)
+        .output()
+        .unwrap();
+    out(&o)
+        .lines()
+        .filter(|l| l.contains("use ${VAR}"))
+        .map(String::from)
+        .collect()
 }
 
 /// The project defaults to English: no CJK text in anything we ship.

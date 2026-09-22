@@ -15,9 +15,7 @@
 
 use serde::Deserialize;
 use std::collections::BTreeMap;
-use std::path::Path;
-#[cfg(test)]
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Where catalog files come from: a directory on disk, or files embedded in the binary.
 pub trait Source {
@@ -27,12 +25,10 @@ pub trait Source {
     fn entries(&self, dir: &str) -> Vec<String>;
 }
 
-/// A catalog directory on disk. The binary uses the embedded catalog; tests load the
-/// repository's `catalog/` (and fixtures) through this.
-#[cfg(test)]
+/// A catalog directory on disk: `handrail check` (for pack authors and the
+/// handrail-packs CI) and the tests load catalogs through this.
 pub struct DirSource(pub PathBuf);
 
-#[cfg(test)]
 impl Source for DirSource {
     fn read(&self, path: &str) -> Option<Vec<u8>> {
         std::fs::read(self.0.join(path)).ok()

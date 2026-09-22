@@ -278,55 +278,16 @@ fn strip_block_keeps_everything_else_byte_for_byte() {
     assert_eq!(strip_block("no block\n"), "no block\n");
 }
 
-/// Each pack's hook test vectors (`tests/*.cases`: name, expected exit code, stdin).
+/// Each pack's hook test vectors (`tests/*.cases`), run by the same code as `handrail check`.
 #[test]
 fn hook_test_vectors() {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("catalog/packs");
-    let mut ran = 0;
-    for pack in fs::read_dir(&root).unwrap() {
-        let pack = pack.unwrap().path();
-        let Ok(cases) = fs::read_dir(pack.join("tests")) else {
-            continue;
-        };
-        for case_file in cases {
-            let case_file = case_file.unwrap().path();
-            let stem = case_file
-                .file_stem()
-                .unwrap()
-                .to_string_lossy()
-                .into_owned();
-            let hook = pack.join("claude-code/hooks").join(format!("{stem}.sh"));
-            for line in fs::read_to_string(&case_file).unwrap().lines() {
-                if line.is_empty() || line.starts_with('#') {
-                    continue;
-                }
-                let mut parts = line.splitn(3, '\t');
-                let (name, want, input) = (
-                    parts.next().unwrap(),
-                    parts.next().unwrap(),
-                    parts.next().unwrap_or(""),
-                );
-                let home = tempfile::tempdir().unwrap();
-                let mut child = std::process::Command::new("sh")
-                    .arg(&hook)
-                    .env("HOME", home.path())
-                    .stdin(std::process::Stdio::piped())
-                    .stdout(std::process::Stdio::null())
-                    .stderr(std::process::Stdio::null())
-                    .spawn()
-                    .unwrap();
-                use std::io::Write;
-                child
-                    .stdin
-                    .take()
-                    .unwrap()
-                    .write_all(input.as_bytes())
-                    .unwrap();
-                let code = child.wait().unwrap().code().unwrap();
-                assert_eq!(code.to_string(), want, "{}: {name}", hook.display());
-                ran += 1;
-            }
-        }
-    }
-    assert!(ran >= 16, "only {ran} vectors ran");
+    let packs = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("catalog/packs");
+    let v = crate::check::hook_vectors(&packs);
+    let failed: Vec<String> = v
+        .iter()
+        .filter(|x| !x.passed())
+        .map(|x| format!("{}: {}", x.hook.display(), x.name))
+        .collect();
+    assert!(failed.is_empty(), "{failed:#?}");
+    assert!(v.len() >= 16, "only {} vectors ran", v.len());
 }

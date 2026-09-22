@@ -2,6 +2,7 @@
 //! where it doesn't. This version targets Claude Code.
 
 mod change;
+mod check;
 mod claude;
 mod context;
 mod core;
@@ -103,6 +104,12 @@ enum Cmd {
     },
     /// Check that the installed policy is actually in force
     Doctor,
+    /// Validate a catalog directory (for pack authors and CI): format, hook tests, lint
+    Check {
+        /// A directory containing packs/ and profiles/
+        #[arg(default_value = ".")]
+        dir: PathBuf,
+    },
     /// Update handrail itself to the latest release
     SelfUpdate {
         /// Only report whether a newer release exists
@@ -178,6 +185,13 @@ fn main() -> ExitCode {
         },
         Cmd::RefreshUpdateCheck => {
             update::refresh_cache(&ctx);
+            Ok(())
+        }
+        Cmd::Check { dir } => {
+            let failures = check::check(&dir);
+            if failures > 0 {
+                return ExitCode::from(1);
+            }
             Ok(())
         }
         Cmd::Statusline => {
